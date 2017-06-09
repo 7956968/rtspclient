@@ -127,7 +127,6 @@ private:
 
     unsigned short   u_port_begin;  /* RTP port that client will be use */
 
-    std::string sdp;
     std::string user_agent;
 	std::string user_name;
 	std::string password;
@@ -139,7 +138,6 @@ private:
     static void taskInterruptRTSP( void *opaque );
 
     bool waitLive555Response( int i_timeout = 0 /* ms */ );
-    int setup();
 
     void controlPauseState();
     void controlSeek();

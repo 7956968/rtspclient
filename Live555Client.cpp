@@ -21,6 +21,12 @@
 
 using namespace std;
 
+#define DEFAULT_WAIT_TIME         (200)         //默认超时时间,200毫秒
+
+#define HTTP_OK	                  (0)
+//这个错误号表明虽然live555没返回http错误。但我们处理RTSP过程中碰到了错误
+#define HTTP_ERR_USR	          (99)
+#define HTTP_TIMEOUT        	  (180)
 #define HTTP_ERR_EOF	          (502)
 #define HTTP_STREAM_NOT_FOUND	  (404)
 #define HTTP_SESSION_NOT_FOUND	  (454)
@@ -243,13 +249,14 @@ Live555Client::LiveTrack::~LiveTrack()
 	}
 }
 
+
 int Live555Client::LiveTrack::init()
 {
     MediaSubsession* sub = static_cast<MediaSubsession*>(media_sub_session);
     p_buffer    = new uint8_t [i_buffer + 4];
 
     if (!p_buffer)
-        return -1;
+        return RTSP_ERR;
 
 	fmt.type  = sub->mediumName();
 	fmt.codec = sub->codecName();
@@ -444,12 +451,11 @@ int Live555Client::LiveTrack::init()
        fmt.text.psz_language = string( p_lang, i_lang_len );
     }
 
-    if( sub->rtcpInstance() != NULL )
-    {
+    if( sub->rtcpInstance() != NULL ){
         sub->rtcpInstance()->setByeHandler( Live555Client::LiveTrack::streamClose, this );
     }
 
-    return 0;
+    return RTSP_OK;
 }
 
 string Live555Client::LiveTrack::getSessionId() const
@@ -501,13 +507,14 @@ void Live555Client::taskInterruptRTSP( void *opaque )
 {
     Live555Client *pThis = static_cast<Live555Client*>(opaque);
 
+    pThis->live555ResultCode = HTTP_TIMEOUT;
     /* Avoid lock */
     pThis->event_rtsp = (char)0xff;
 }
 
 bool Live555Client::waitLive555Response( int i_timeout /* ms */ )
 {
-    TaskToken task;
+    TaskToken task = nullptr;
     BasicTaskScheduler* sch = (BasicTaskScheduler*)scheduler;
     event_rtsp = 0;
     if( i_timeout > 0 )
@@ -518,10 +525,10 @@ bool Live555Client::waitLive555Response( int i_timeout /* ms */ )
                                                       this );
     }
     event_rtsp = 0;
-	live555ResultCode = 0;
+	live555ResultCode = HTTP_OK;
     sch->doEventLoop( &event_rtsp );
     //here, if b_error is true and i_live555_ret = 0 we didn't receive a response
-    if( i_timeout > 0 )
+    if(task)
     {
         /* remove the task */
         sch->unscheduleDelayedTask( task );
@@ -530,149 +537,6 @@ bool Live555Client::waitLive555Response( int i_timeout /* ms */ )
 }
 
 #define DEFAULT_FRAME_BUFFER_SIZE 500000
-
-int Live555Client::setup()
-{
-    MediaSubsessionIterator *iter   = NULL;
-    MediaSubsession         *sub    = NULL;
-	MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
-    UsageEnvironment* environment = static_cast<UsageEnvironment*>(env);
-
-    int            i_client_port;
-    int            i_return = 0;
-    unsigned int   i_receive_buffer = 0;
-    int            i_frame_buffer = DEFAULT_FRAME_BUFFER_SIZE;
-    unsigned const thresh = 200000; /* RTP reorder threshold .2 second (default .1) */
-
-    i_client_port = u_port_begin; //var_InheritInteger( p_demux, "rtp-client-port" );
-
-    /* here print sdp on debug */
-    printf("SDP content:\n%s", sdp.c_str());
-    /* Create the session from the SDP */
-    if( !(m_pMediaSession = MediaSession::createNew( *environment, sdp.c_str() ) ) )
-    {
-        return RTSP_ERR;
-    }
-
-    iter = new MediaSubsessionIterator( *m_pMediaSession);
-    while( ( sub = iter->next() ) != NULL )
-    {
-        bool b_init;
-        LiveTrack* tk;
-        /* Value taken from mplayer */
-        if( !strcmp( sub->mediumName(), "audio" ) )
-            i_receive_buffer = 200000;
-        else if( !strcmp( sub->mediumName(), "video" ) )
-            i_receive_buffer = 2000000;
-        else if( !strcmp( sub->mediumName(), "text" ) )
-            ;
-        else continue;
-
-        if( i_client_port != -1 )
-        {
-            sub->setClientPortNum( i_client_port );
-            i_client_port += 2;
-        }
-
-        if( !strcmp( sub->codecName(), "X-ASF-PF" ) )
-            b_init = sub->initiate( 0 );
-        else
-            b_init = sub->initiate();
-
-        if( b_init )
-        {
-			FramedFilter* normalizerFilter = client->createNewPresentationTimeSubsessionNormalizer(
-			sub->readSource(), sub->rtpSource(),
-				sub->codecName());
-
-			sub->addFilter(normalizerFilter);
-
-            if( sub->rtpSource() != NULL )
-            {
-                int fd = sub->rtpSource()->RTPgs()->socketNum();
-
-                /* Increase the buffer size */
-                if( i_receive_buffer > 0 )
-                    increaseReceiveBufferTo( *environment, fd, i_receive_buffer );
-
-                /* Increase the RTP reorder timebuffer just a bit */
-                sub->rtpSource()->setPacketReorderingThresholdTime(thresh);
-            }
-
-            /* Issue the SETUP */
-            if( client )
-            {
-                client->sendSetupCommand( *sub, MyRTSPClient::default_live555_callback, False,
-                                               toBool( b_rtsp_tcp ),
-                                               False/*toBool( p_sys->b_force_mcast && !b_rtsp_tcp )*/ );
-                if( !waitLive555Response(200) )
-                {
-                    /* if we get an unsupported transport error, toggle TCP
-                     * use and try again */
-                    if(live555ResultCode == HTTP_UNSUPPORTED_TRANSPOR)
-                        client->sendSetupCommand( *sub, MyRTSPClient::default_live555_callback, False,
-                                                       !toBool( b_rtsp_tcp ), False );
-                    if(live555ResultCode != HTTP_UNSUPPORTED_TRANSPOR || !waitLive555Response() )
-                    {
-                        //msg_Err( p_demux, "SETUP of'%s/%s' failed %s",
-                        //         sub->mediumName(), sub->codecName(),
-                        //         p_sys->env->getResultMsg() );
-                        continue;
-                    }
-                    else
-                    {
-                        b_rtsp_tcp = true;
-                    }
-                }
-            }
-
-            /* Check if we will receive data from this subsession for
-             * this track */
-            if( sub->readSource() == NULL ) continue;
-            if( !b_multicast )
-            {
-                /* We need different rollover behaviour for multicast */
-                b_multicast = IsMulticastAddress( sub->connectionEndpointAddress() );
-            }
-
-            tk = new LiveTrack(this, sub, i_frame_buffer);
-            if( !tk ){
-                delete iter;
-                return RTSP_ERR;
-            }
-
-            if (tk->init())
-            {
-                delete tk;
-            }
-            else {
-                listTracks.push_back(tk);
-                onInitializedTrack(tk);
-            }
-        }
-    }
-    delete iter;
-    
-    if( !listTracks.size() ) i_return = RTSP_ERR;
-
-    /* Retrieve the starttime if possible */
-    f_npt_start = m_pMediaSession->playStartTime();
-
-    /* Retrieve the duration if possible */
-    if (m_pMediaSession->playEndTime() > 0)
-        f_npt_length = m_pMediaSession->playEndTime();
-
-    /* */
-    //msg_Dbg( p_demux, "setup start: %f stop:%f", p_sys->f_npt_start, p_sys->f_npt_length );
-
-    /* */
-    b_no_data = true;
-    i_no_data_ti = 0;
-
-    u_port_begin = i_client_port;
-
-    return i_return;
-}
 
 //这个接口到底危险不危险?
 void Live555Client::controlPauseState()
@@ -688,7 +552,7 @@ void Live555Client::controlPauseState()
         client->sendPlayCommand( *m_pMediaSession, MyRTSPClient::default_live555_callback, -1.0f, -1.0f, m_pMediaSession->scale() );
     }
 
-    waitLive555Response();
+    waitLive555Response(DEFAULT_WAIT_TIME);
 }
 
 void Live555Client::controlSeek()
@@ -696,10 +560,10 @@ void Live555Client::controlSeek()
     RTSPClient* client = static_cast<RTSPClient*>(rtsp);
 
     client->sendPauseCommand( *m_pMediaSession, MyRTSPClient::default_live555_callback );
-    waitLive555Response();
+    waitLive555Response(DEFAULT_WAIT_TIME);
     
     client->sendPlayCommand( *m_pMediaSession, MyRTSPClient::default_live555_callback, f_seekTime, -1.0f, m_pMediaSession->scale() );
-    waitLive555Response();
+    waitLive555Response(DEFAULT_WAIT_TIME);
 
     f_seekTime = -1.0;
     /* Retrieve the starttime if possible */
@@ -916,22 +780,18 @@ int Live555Client::PlayRtsp(string Uri)
 	
 	rtsp->sendOptionsCommand(&MyRTSPClient::continueAfterOPTIONS, &authenticator);
 	if (!waitLive555Response(3000)){
-		Status = RTSP_TIMEOUT;
-		goto err;
+        Status = HttpErrToRtspErr(live555ResultCode);
+        goto err;
 	}
 
 	f_npt_start = 0;
-
-	if (setup() != 0) {
-		goto err;
-	}
 
 	/* The PLAY */
 	rtsp->sendPlayCommand(*m_pMediaSession, MyRTSPClient::default_live555_callback, f_npt_start, -1, 1);
 
 	if (!waitLive555Response(3000)){
-		Status = RTSP_TIMEOUT;
-		goto err;
+        Status = HttpErrToRtspErr(live555ResultCode);
+        goto err;
 	}
 
 	/* Retrieve the timeout value and set up a timeout prevention thread */
@@ -972,7 +832,6 @@ int Live555Client::PlayRtsp(string Uri)
 
 	listTracks.clear();
 
-	//b_is_playing = false;
 	u_port_begin = 0;
 	
 	return r;
@@ -1026,17 +885,146 @@ void Live555Client::setDestination(string Addr, int DstPort)
 	client->setDestination(Addr, DstPort);
 }
 
-void Live555Client::continueAfterDESCRIBE( int result_code, char* result_string )
+void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
 {
 	live555ResultCode = result_code;
-    if ( result_code == 0 ){
-        char* sdpDescription = result_string;
-        if( sdpDescription ){
-            sdp = string( sdpDescription );
-        }
+    if ( result_code != 0  || (sdp == nullptr)){
+        return;
     }
 
+    MediaSubsessionIterator *iter = NULL;
+    MediaSubsession         *sub = NULL;
+    MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
+    UsageEnvironment* environment = static_cast<UsageEnvironment*>(env);
+
+    int            i_client_port;
+    int            i_return = 0;
+    unsigned int   i_receive_buffer = 0;
+    int            i_frame_buffer = DEFAULT_FRAME_BUFFER_SIZE;
+    unsigned const thresh = 200000; /* RTP reorder threshold .2 second (default .1) */
+
+    i_client_port = u_port_begin; //var_InheritInteger( p_demux, "rtp-client-port" );
+
+                                  /* here print sdp on debug */
+    printf("SDP content:\n%s", sdp);
+    /* Create the session from the SDP */
+    m_pMediaSession = MediaSession::createNew(*environment, sdp);
+
+    iter = new MediaSubsessionIterator(*m_pMediaSession);
+    while ((sub = iter->next()) != NULL)
+    {
+        bool b_init;
+        LiveTrack* tk;
+        /* Value taken from mplayer */
+        if (!strcmp(sub->mediumName(), "audio"))
+            i_receive_buffer = 200000;
+        else if (!strcmp(sub->mediumName(), "video"))
+            i_receive_buffer = 2000000;
+        else if (!strcmp(sub->mediumName(), "text"))
+            ;
+        else continue;
+
+        if (i_client_port != -1)
+        {
+            sub->setClientPortNum(i_client_port);
+            i_client_port += 2;
+        }
+
+        if (!strcmp(sub->codecName(), "X-ASF-PF"))
+            b_init = sub->initiate(0);
+        else
+            b_init = sub->initiate();
+
+        if (b_init)
+        {
+            FramedFilter* normalizerFilter = client->createNewPresentationTimeSubsessionNormalizer(
+                sub->readSource(), sub->rtpSource(),
+                sub->codecName());
+
+            sub->addFilter(normalizerFilter);
+
+            if (sub->rtpSource() != NULL)
+            {
+                int fd = sub->rtpSource()->RTPgs()->socketNum();
+
+                /* Increase the buffer size */
+                if (i_receive_buffer > 0)
+                    increaseReceiveBufferTo(*environment, fd, i_receive_buffer);
+
+                /* Increase the RTP reorder timebuffer just a bit */
+                sub->rtpSource()->setPacketReorderingThresholdTime(thresh);
+            }
+
+            /* Issue the SETUP */
+            if (client)
+            {
+                client->sendSetupCommand(*sub, MyRTSPClient::default_live555_callback, False,
+                    toBool(b_rtsp_tcp),
+                    False/*toBool( p_sys->b_force_mcast && !b_rtsp_tcp )*/);
+                if (!waitLive555Response(200))
+                {
+                    /* if we get an unsupported transport error, toggle TCP
+                    * use and try again */
+                    if (live555ResultCode != HTTP_UNSUPPORTED_TRANSPOR) {
+                        break;
+                    }
+
+                    live555ResultCode = HTTP_OK;
+                    client->sendSetupCommand(*sub, MyRTSPClient::default_live555_callback, False,
+                        !toBool(b_rtsp_tcp), False);
+
+                    if (!waitLive555Response(200)){
+                        onDebug("SETUP failed!");
+                        break;
+                    }
+                    else{
+                        b_rtsp_tcp = true;
+                    }
+                }
+            }
+
+            /* Check if we will receive data from this subsession for
+            * this track */
+            if (sub->readSource() == NULL) continue;
+            if (!b_multicast){
+                /* We need different rollover behaviour for multicast */
+                b_multicast = IsMulticastAddress(sub->connectionEndpointAddress());
+            }
+
+            tk = new LiveTrack(this, sub, i_frame_buffer);
+
+            if (tk->init() != RTSP_OK){
+                delete tk;
+                break;
+            }
+            else {
+                listTracks.push_back(tk);
+                onInitializedTrack(tk);
+            }
+        }
+    }
+    delete iter;
+
+    if (!listTracks.size()) live555ResultCode = HTTP_ERR_USR;
+
+    /* Retrieve the starttime if possible */
+    f_npt_start = m_pMediaSession->playStartTime();
+
+    /* Retrieve the duration if possible */
+    if (m_pMediaSession->playEndTime() > 0)
+        f_npt_length = m_pMediaSession->playEndTime();
+
+    /* */
+    //msg_Dbg( p_demux, "setup start: %f stop:%f", p_sys->f_npt_start, p_sys->f_npt_length );
+
+    /* */
+    b_no_data = true;
+    i_no_data_ti = 0;
+
+    u_port_begin = i_client_port;
+
 	event_rtsp = 1;
+
 }
 
 void Live555Client::continueAfterOPTIONS( int result_code, char* result_string )
@@ -1299,6 +1287,19 @@ uint8_t * parseVorbisConfigStr(char const* configStr,
 	}
 	delete[] p_cfg;
 	return p_extra;
+}
+
+int HttpErrToRtspErr(int http)
+{
+    if (http == HTTP_TIMEOUT)               return RTSP_TIMEOUT;
+    if (http == HTTP_ERR_USR)               return RTSP_ERR;
+    if (http == HTTP_ERR_EOF)               return RTSP_EOF;
+    if (http == HTTP_STREAM_NOT_FOUND)      return RTSP_TIMEOUT;
+    if (http == HTTP_SESSION_NOT_FOUND)     return RTSP_TIMEOUT;
+    if (http == HTTP_UNSUPPORTED_TRANSPOR)  return RTSP_TIMEOUT;
+    if (http == HTTP_OK)                    return RTSP_OK;
+
+    return RTSP_ERR;
 }
 
 /*
