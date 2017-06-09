@@ -74,6 +74,8 @@ public:
 			std::this_thread::sleep_for(std::chrono::seconds(m_ReconnectGap));
 		}
 
+		m_RtspStatus = Status;
+
 		std::cout << "rtsp thread quit" << std::endl;
 		m_MyLoop = false;
 	}
@@ -134,8 +136,11 @@ public:
 
 	bool PrintTs = true;
 
+	int GetStatus() { return m_RtspStatus; }
+private:
 	int64_t lastPts = 0, lastDts = 0;
 
+	int m_RtspStatus = RTSP_OK;
 	std::string m_UsrName;
 	std::string m_Password;
 	std::string m_Uri;
@@ -287,8 +292,12 @@ int main()
 			demux0.PrintTs = false;
 			demux0.Play(RtspAddrWileEof);
 
+			while(1)
 			{
-				std::this_thread::sleep_for(std::chrono::seconds(100));
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+				if (demux0.GetStatus() != RTSP_OK) {
+					break;
+				}
 			}
 
 			demux0.Stop();
