@@ -38,129 +38,6 @@ unsigned char* parseH264ConfigStr(char const* configStr,
 uint8_t * parseVorbisConfigStr(char const* configStr,
 	unsigned int& configSize);
 
-#if defined(_WIN32) || defined(WIN32)
-char *strcasestr(const char *phaystack, const char *pneedle)
-// To make this work with MS Visual C++, this version uses tolower/toupper() in place of
-// _tolower/_toupper(), since apparently in GNU C, the underscore macros are identical
-// to the non-underscore versions; but in MS the underscore ones do an unconditional
-// conversion (mangling non-alphabetic characters such as the zero terminator).  MSDN:
-// tolower: Converts c to lowercase if appropriate
-// _tolower: Converts c to lowercase
-
-// Return the offset of one string within another.
-// Copyright (C) 1994,1996,1997,1998,1999,2000 Free Software Foundation, Inc.
-// This file is part of the GNU C Library.
-
-// The GNU C Library is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public
-// License as published by the Free Software Foundation; either
-// version 2.1 of the License, or (at your option) any later version.
-
-// The GNU C Library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// Lesser General Public License for more details.
-
-// You should have received a copy of the GNU Lesser General Public
-// License along with the GNU C Library; if not, write to the Free
-// Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
-// 02111-1307 USA.
-
-// My personal strstr() implementation that beats most other algorithms.
-// Until someone tells me otherwise, I assume that this is the
-// fastest implementation of strstr() in C.
-// I deliberately chose not to comment it.  You should have at least
-// as much fun trying to understand it, as I had to write it :-).
-// Stephen R. van den Berg, berg@pool.informatik.rwth-aachen.de
-
-// Faster looping by precalculating bl, bu, cl, cu before looping.
-// 2004 Apr 08	Jose Da Silva, digital@joescat@com
-{
-	register const unsigned char *haystack, *needle;
-	register unsigned bl, bu, cl, cu;
-
-	haystack = (const unsigned char *)phaystack;
-	needle = (const unsigned char *)pneedle;
-
-	bl = tolower(*needle);
-	if (bl != '\0')
-	{
-		// Scan haystack until the first character of needle is found:
-		bu = toupper(bl);
-		haystack--;				/* possible ANSI violation */
-		do
-		{
-			cl = *++haystack;
-			if (cl == '\0')
-				goto ret0;
-		} while ((cl != bl) && (cl != bu));
-
-		// See if the rest of needle is a one-for-one match with this part of haystack:
-		cl = tolower(*++needle);
-		if (cl == '\0')  // Since needle consists of only one character, it is already a match as found above.
-			goto foundneedle;
-		cu = toupper(cl);
-		++needle;
-		goto jin;
-
-		for (;;)
-		{
-			register unsigned a;
-			register const unsigned char *rhaystack, *rneedle;
-			do
-			{
-				a = *++haystack;
-				if (a == '\0')
-					goto ret0;
-				if ((a == bl) || (a == bu))
-					break;
-				a = *++haystack;
-				if (a == '\0')
-					goto ret0;
-			shloop:
-				;
-			} while ((a != bl) && (a != bu));
-
-		jin:
-			a = *++haystack;
-			if (a == '\0')  // Remaining part of haystack is shorter than needle.  No match.
-				goto ret0;
-
-			if ((a != cl) && (a != cu)) // This promising candidate is not a complete match.
-				goto shloop;            // Start looking for another match on the first char of needle.
-
-			rhaystack = haystack-- + 1;
-			rneedle = needle;
-			a = tolower(*rneedle);
-
-			if (tolower(*rhaystack) == (int)a)
-				do
-				{
-					if (a == '\0')
-						goto foundneedle;
-					++rhaystack;
-					a = tolower(*++needle);
-					if (tolower(*rhaystack) != (int)a)
-						break;
-					if (a == '\0')
-						goto foundneedle;
-					++rhaystack;
-					a = tolower(*++needle);
-				} while (tolower(*rhaystack) == (int)a);
-
-				needle = rneedle;		/* took the register-poor approach */
-
-				if (a == '\0')
-					break;
-		} // for(;;)
-	} // if (bl != '\0')
-foundneedle:
-	return (char*)haystack;
-ret0:
-	return 0;
-}
-#endif
-
 static /* Base64 decoding */
 size_t vlc_b64_decode_binary_to_buffer(uint8_t *p_dst, size_t i_dst, const char *p_src)
 {
@@ -225,7 +102,7 @@ class MyRTSPClient : public RTSPClient
 protected:
     Live555Client* parent;
     Boolean fSupportsGetParameter;
-	std::string destination;
+	string destination;
 	int destPort = 0;
 
 	PresentationTimeSessionNormalizer* PtsSessionNormalizer = nullptr;
@@ -256,7 +133,7 @@ public:
 		char const*& protocolStr,
 		char*& extraHeaders, Boolean& extraHeadersWereAllocated);
 
-	void setDestination(std::string Addr, int DstPort);
+	void setDestination(string Addr, int DstPort);
 
 	PresentationTimeSubsessionNormalizer*
 		createNewPresentationTimeSubsessionNormalizer(FramedSource* inputSource, 
@@ -270,7 +147,7 @@ public:
     Boolean isSupportsGetParameter() { return fSupportsGetParameter; }
 };
 
-void MyRTSPClient::setDestination(std::string Addr, int DstPort)
+void MyRTSPClient::setDestination(string Addr, int DstPort)
 {
 	destination = Addr;
 	destPort = DstPort;
@@ -427,7 +304,7 @@ int Live555Client::LiveTrack::init()
 			if ((p_extra = parseStreamMuxConfigStr(sub->fmtp_config(),
 				i_extra)))
 			{
-				fmt.extra = std::string((char*)p_extra, i_extra);
+				fmt.extra = string((char*)p_extra, i_extra);
 				delete[] p_extra;
 			}
 			/* Because the "faad" decoder does not handle the LATM
@@ -442,7 +319,7 @@ int Live555Client::LiveTrack::init()
 			if ((p_extra = parseGeneralConfigStr(sub->fmtp_config(),
 				i_extra)))
 			{
-				fmt.extra = std::string((char*)p_extra, i_extra);
+				fmt.extra = string((char*)p_extra, i_extra);
 				delete[] p_extra;
 			}
 		}
@@ -459,7 +336,7 @@ int Live555Client::LiveTrack::init()
 			if ((p_extra = parseVorbisConfigStr(sub->fmtp_config(),
 				i_extra)))
 			{
-				fmt.extra = std::string((char*)p_extra, i_extra);
+				fmt.extra = string((char*)p_extra, i_extra);
 				delete[] p_extra;
 			}
 		}
@@ -480,7 +357,7 @@ int Live555Client::LiveTrack::init()
 			if ((p_extra = parseH264ConfigStr(sub->fmtp_spropparametersets(),
 				i_extra)))
 			{
-				fmt.extra = std::string((char*)p_extra, i_extra);
+				fmt.extra = string((char*)p_extra, i_extra);
 				delete[] p_extra;
 			}
 		}
@@ -500,17 +377,17 @@ int Live555Client::LiveTrack::init()
 			{
 				if (p_extra1)
 				{
-					fmt.extra = std::string((char*)p_extra1, i_extra1);
+					fmt.extra = string((char*)p_extra1, i_extra1);
 					delete[] p_extra1;
 				}
 				if (p_extra2)
 				{
-					fmt.extra += std::string((char*)p_extra2, i_extra2);
+					fmt.extra += string((char*)p_extra2, i_extra2);
 					delete[] p_extra2;
 				}
 				if (p_extra3)
 				{
-					fmt.extra += std::string((char*)p_extra3, i_extra3);
+					fmt.extra += string((char*)p_extra3, i_extra3);
 					delete[] p_extra3;
 				}
 			}
@@ -524,23 +401,23 @@ int Live555Client::LiveTrack::init()
 			if ((p_extra = parseGeneralConfigStr(sub->fmtp_config(),
 				i_extra)))
 			{
-				fmt.extra = std::string((char*)p_extra, i_extra);
+				fmt.extra = string((char*)p_extra, i_extra);
 				delete[] p_extra;
 			}
 		}
-		else if (!strcmp(sub->codecName(), "X-QT") ||
-			!strcmp(sub->codecName(), "X-QUICKTIME") ||
-			!strcmp(sub->codecName(), "X-QDM") ||
-			!strcmp(sub->codecName(), "X-SV3V-ES") ||
-			!strcmp(sub->codecName(), "X-SORENSONVIDEO"))
+		else if ((fmt.codec == "X-QT")        ||
+			     (fmt.codec == "X-QUICKTIME") ||
+			     (fmt.codec == "X-QDM")       ||
+			     (fmt.codec == "X-SV3V-ES")   ||
+			     (fmt.codec == "X-SORENSONVIDEO"))
 		{
 			b_quicktime = true;
 		}
-		else if (!strcmp(sub->codecName(), "DV"))
+		else if (fmt.codec == "DV")
 		{
 			b_discard_trunc = true;
 		}
-		else if (!strcmp(sub->codecName(), "THEORA"))
+		else if (fmt.codec == "THEORA")
 		{
 			unsigned int i_extra;
 			uint8_t      *p_extra;
@@ -548,7 +425,7 @@ int Live555Client::LiveTrack::init()
 			if ((p_extra = parseVorbisConfigStr(sub->fmtp_config(),
 				i_extra)))
 			{
-				fmt.extra = std::string((char*)p_extra, i_extra);
+				fmt.extra = string((char*)p_extra, i_extra);
 				delete[] p_extra;
 			}
 			else
@@ -564,7 +441,7 @@ int Live555Client::LiveTrack::init()
        unsigned i_lang_len;
        p_lang += 7;
        i_lang_len = strcspn( p_lang, " \r\n" );
-       fmt.text.psz_language = std::string( p_lang, i_lang_len );
+       fmt.text.psz_language = string( p_lang, i_lang_len );
     }
 
     if( sub->rtcpInstance() != NULL )
@@ -575,7 +452,7 @@ int Live555Client::LiveTrack::init()
     return 0;
 }
 
-const char* Live555Client::LiveTrack::getSessionId() const
+string Live555Client::LiveTrack::getSessionId() const
 {
     MediaSubsession* sub = static_cast<MediaSubsession*>(media_sub_session);
     if (!sub)
@@ -584,7 +461,7 @@ const char* Live555Client::LiveTrack::getSessionId() const
     return sub->sessionId();
 }
 
-const char* Live555Client::LiveTrack::getSessionName() const
+string Live555Client::LiveTrack::getSessionName() const
 {
     MediaSubsession* sub = static_cast<MediaSubsession*>(media_sub_session);
     if (!sub)
@@ -695,13 +572,6 @@ int Live555Client::setup()
         {
             sub->setClientPortNum( i_client_port );
             i_client_port += 2;
-        }
-
-        if( strcasestr( sub->codecName(), "REAL" ) )
-        {
-            //msg_Info( p_demux, "real codec detected, using real-RTSP instead" );
-            //b_real = true; /* This is a problem, we'll handle it later */
-            continue;
         }
 
         if( !strcmp( sub->codecName(), "X-ASF-PF" ) )
@@ -1023,7 +893,7 @@ Live555Client::~Live555Client(void)
 	delete sch;
 }
 
-int Live555Client::PlayRtsp(std::string Uri)
+int Live555Client::PlayRtsp(string Uri)
 {
 	if (Uri.length() == 0) {
 		return RTSP_ERR;
@@ -1144,44 +1014,25 @@ int Live555Client::StopRtsp()
     return 0;
 }
 
-void Live555Client::setUseTcp(bool bUseTcp)
-{
-    this->b_rtsp_tcp = bUseTcp;
-}
-
 void Live555Client::setUser(const char* user_name, const char* password)
 {
     this->user_name = user_name;
     this->password = password;
 }
 
-void Live555Client::setUserAgent(const char* user_agent)
-{
-    this->user_agent = user_agent;
-}
-
-void Live555Client::setDestination(std::string Addr, int DstPort)
+void Live555Client::setDestination(string Addr, int DstPort)
 {
 	MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
 	client->setDestination(Addr, DstPort);
 }
 
-void Live555Client::clearDestination()
-{
-	MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
-	std::string tmpS;
-	client->setDestination(tmpS, -1);
-}
-
 void Live555Client::continueAfterDESCRIBE( int result_code, char* result_string )
 {
 	live555ResultCode = result_code;
-    if ( result_code == 0 )
-    {
+    if ( result_code == 0 ){
         char* sdpDescription = result_string;
-        if( sdpDescription )
-        {
-            sdp = std::string( sdpDescription );
+        if( sdpDescription ){
+            sdp = string( sdpDescription );
         }
     }
 
@@ -1242,7 +1093,7 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
                 track->doWaiting(0);
                 return;
             }
-            track->getFormat().codec = std::string((char*)sdAtom, 4);;
+            track->getFormat().codec = string((char*)sdAtom, 4);;
             track->getFormat().video.i_width  = (sdAtom[28] << 8) | sdAtom[29];
             track->getFormat().video.i_height = (sdAtom[30] << 8) | sdAtom[31];
 
@@ -1258,7 +1109,7 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
                         atomLength > 8 &&
                         atomLength <= INT_MAX )
                     {
-						track->getFormat().extra = std::string((char*)pos + 8, atomLength - 8);
+						track->getFormat().extra = string((char*)pos + 8, atomLength - 8);
                         break;
                     }
                     pos += atomLength;
@@ -1276,7 +1127,7 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
                 track->doWaiting(0);
                 return;
             }
-			track->getFormat().codec = std::string((char*)sdAtom, 4);;
+			track->getFormat().codec = string((char*)sdAtom, 4);;
 			track->getFormat().audio.i_bitspersample = (sdAtom[22] << 8) | sdAtom[23];
         }
         //tk->p_es = es_out_Add( p_demux->out, &tk->fmt );
@@ -1292,15 +1143,8 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
             //msg_Dbg( p_demux, "lost %d bytes", i_truncated_bytes );
             //msg_Dbg( p_demux, "increasing buffer size to %d", tk->i_buffer * 2 );
             p_tmp = realloc(track->p_buffer, track->i_buffer * 2 );
-            if( p_tmp == NULL )
-            {
-               onDebug( "realloc failed" );
-            }
-            else
-            {
-               track->p_buffer = (uint8_t*)p_tmp;
-               track->i_buffer *= 2;
-            }
+			track->p_buffer = (uint8_t*)p_tmp;
+			track->i_buffer *= 2;
         }
     }
 

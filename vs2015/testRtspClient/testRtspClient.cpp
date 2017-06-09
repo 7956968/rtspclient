@@ -33,13 +33,13 @@ public:
 
 	void Loop()
 	{
-		int statu = RTSP_OK;
+		int Status = RTSP_OK;
 
 		while (m_MyLoop)
 		{
-			statu = PlayRtsp(m_Uri);
+			Status = PlayRtsp(m_Uri);
 
-			if (statu == RTSP_TIMEOUT) {
+			if (Status == RTSP_TIMEOUT) {
 				std::cout << "timeout" << std::endl;
 
 				if (m_ReconnectOnTimeOut) {
@@ -50,24 +50,24 @@ public:
 					break;
 				}
 			}
-			else if(statu == RTSP_EOF) {
+			else if(Status == RTSP_EOF) {
 				std::cout << "rtsp eof" << std::endl;
 				break;
 				//do what you want
 			}
-			else if (statu == RTSP_ERR) {
+			else if (Status == RTSP_ERR) {
 				std::cout << "rtsp err" << std::endl;
 				break;
 			}
-			else if (statu == RTSP_USR_STOP) {
+			else if (Status == RTSP_USR_STOP) {
 				std::cout << "usr stop" << std::endl;
 				break;
 			}
-			else if (statu == RTSP_OK) {
+			else if (Status == RTSP_OK) {
 
 			}
 			else {
-				std::cout << "weird code:" << statu << std::endl;
+				std::cout << "weird code:" << Status << std::endl;
 
 			}
 			//避免疯狂的再次重连

@@ -15,8 +15,11 @@
 
 class RTSPClient;
 class MediaSession;
+class MyRTSPClient;
+
 class Live555Client
 {
+	friend class MyRTSPClient;
 public:
     class LiveTrack {
     public:
@@ -77,8 +80,8 @@ public:
         bool isAsf() { return b_asf; }
         bool discardTruncated() { return b_discard_trunc; }
         void* getMediaSubsession() { return media_sub_session; }
-        const char* getSessionId() const;
-        const char* getSessionName() const;
+        std::string getSessionId() const;
+		std::string getSessionName() const;
         void setNPT(double npt) { f_npt = npt; }
         double getNPT() { return f_npt; }
 
@@ -144,6 +147,15 @@ private:
     int demux(void);
     int demux_loop();
 
+	void onStreamRead(LiveTrack* track, unsigned int i_size,
+		unsigned int i_truncated_bytes, struct timeval pts,
+		unsigned int duration);
+	// callback functions
+	void continueAfterDESCRIBE(int result_code, char* result_string);
+	void continueAfterOPTIONS(int result_code, char* result_string);
+	void live555Callback(int result_code);
+	void onStreamClose(LiveTrack* track);
+
 public:
     Live555Client(void);
     virtual ~Live555Client(void);
@@ -156,12 +168,12 @@ public:
 
     bool isPaused() const { return b_is_paused; }
 
-    void setUseTcp(bool bUseTcp);
+	void setUseTcp(bool bUseTcp) { b_rtsp_tcp = bUseTcp; }
     void setUser(const char* user_name, const char* password);
-    void setUserAgent(const char* user_agent);
+	void setUserAgent(const char* user_agent) { user_agent = user_agent; }
 	/* double ports ,like 7000-7001, another for rtcp*/
 	void setDestination(std::string Addr, int DstPort);
-	void clearDestination();
+	void clearDestination() { setDestination("", 0); }
 
     void setRTPPortBegin(unsigned short port_begin) { u_port_begin = port_begin; }
     unsigned short getRTPPortNoUse() { return u_port_begin; }
@@ -175,14 +187,6 @@ public:
 
     virtual void onDebug(const char* msg){}
 
-	void onStreamClose(LiveTrack* track);
-    // callback functions
-    void continueAfterDESCRIBE( int result_code, char* result_string );
-    void continueAfterOPTIONS( int result_code, char* result_string );
-    void live555Callback( int result_code );
-    void onStreamRead(LiveTrack* track, unsigned int i_size,
-        unsigned int i_truncated_bytes, struct timeval pts,
-        unsigned int duration );
 protected:
 	//开始播放,阻塞操作
 	int PlayRtsp(std::string Uri);
