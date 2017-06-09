@@ -1294,9 +1294,9 @@ int HttpErrToRtspErr(int http)
     if (http == HTTP_TIMEOUT)               return RTSP_TIMEOUT;
     if (http == HTTP_ERR_USR)               return RTSP_ERR;
     if (http == HTTP_ERR_EOF)               return RTSP_EOF;
-    if (http == HTTP_STREAM_NOT_FOUND)      return RTSP_TIMEOUT;
-    if (http == HTTP_SESSION_NOT_FOUND)     return RTSP_TIMEOUT;
-    if (http == HTTP_UNSUPPORTED_TRANSPOR)  return RTSP_TIMEOUT;
+    if (http == HTTP_STREAM_NOT_FOUND)      return RTSP_ERR;
+    if (http == HTTP_SESSION_NOT_FOUND)     return RTSP_ERR;
+    if (http == HTTP_UNSUPPORTED_TRANSPOR)  return RTSP_ERR;
     if (http == HTTP_OK)                    return RTSP_OK;
 
     return RTSP_ERR;
