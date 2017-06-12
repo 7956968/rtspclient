@@ -222,7 +222,7 @@ int main()
 			demux0.Stop();
 		} },
 
-		{1,"测试一个不存在的地址并尝试不断连接10秒后关闭",[&] {
+		{0,"测试一个不存在的地址并尝试不断连接10秒后关闭",[&] {
 			DemuxLive555 demux0;
 
 			demux0.Play(NoExistRtspAddr);
@@ -246,7 +246,7 @@ int main()
 			demux0.Stop();
 		}},
 
-		{0,"测试一个存在的地址并连接10秒后关闭",[&] {
+		{1,"测试一个存在的地址并连接10秒后关闭",[&] {
 			DemuxLive555 demux0;
 
 			demux0.Play(normalRtspAddr);
@@ -258,7 +258,7 @@ int main()
 			demux0.Stop();
 		}},
 
-		{1,"单路疯狂的播放停止",[&] {
+		{0,"单路疯狂的播放停止",[&] {
 			int testTime = 5;
 			while (testTime-- > 0)
 			{

@@ -1,4 +1,3 @@
-
 #include "live555client.h"
 #include <UsageEnvironment.hh>
 #include <BasicUsageEnvironment.hh>
@@ -514,7 +513,7 @@ void Live555Client::taskInterruptRTSP( void *opaque )
     pThis->event_rtsp = (char)0xff;
 }
 
-bool Live555Client::waitLive555Response( int i_timeout /* ms */ )
+int Live555Client::waitLive555Response( int i_timeout /* ms */ )
 {
     TaskToken task = nullptr;
     BasicTaskScheduler* sch = (BasicTaskScheduler*)scheduler;
@@ -535,7 +534,7 @@ bool Live555Client::waitLive555Response( int i_timeout /* ms */ )
         /* remove the task */
         sch->unscheduleDelayedTask( task );
     }
-    return !live555ResultCode;
+    return HttpErrToRtspErr(live555ResultCode);
 }
 
 #define DEFAULT_FRAME_BUFFER_SIZE 500000
@@ -777,8 +776,8 @@ int Live555Client::PlayRtsp(string Uri)
 	}
 	
 	rtsp->sendOptionsCommand(&MyRTSPClient::continueAfterOPTIONS, &authenticator);
-	if (!waitLive555Response(DEFAULT_WAIT_TIME)){
-        Status = HttpErrToRtspErr(live555ResultCode);
+	Status = waitLive555Response(DEFAULT_WAIT_TIME);
+	if (Status != RTSP_OK){
         goto quit;
 	}
 
@@ -787,9 +786,9 @@ int Live555Client::PlayRtsp(string Uri)
 	/* The PLAY */
 	rtsp->sendPlayCommand(*m_pMediaSession, MyRTSPClient::default_live555_callback, f_npt_start, -1, 1);
 
-	if (!waitLive555Response(DEFAULT_WAIT_TIME)){
-        Status = HttpErrToRtspErr(live555ResultCode);
-        goto quit;
+	Status = waitLive555Response(DEFAULT_WAIT_TIME);
+	if (Status != RTSP_OK) {
+		goto quit;
 	}
 
 	/* Retrieve the timeout value and set up a timeout prevention thread */
@@ -957,7 +956,7 @@ void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
                 client->sendSetupCommand(*sub, MyRTSPClient::default_live555_callback, False,
                     toBool(b_rtsp_tcp),
                     False/*toBool( p_sys->b_force_mcast && !b_rtsp_tcp )*/);
-                if (!waitLive555Response(DEFAULT_WAIT_TIME))
+                if (waitLive555Response(DEFAULT_WAIT_TIME) != RTSP_OK)
                 {
                     /* if we get an unsupported transport error, toggle TCP
                     * use and try again */
@@ -965,12 +964,11 @@ void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
                         break;
                     }
 
-                    live555ResultCode = HTTP_OK;
                     client->sendSetupCommand(*sub, MyRTSPClient::default_live555_callback, False,
                         !toBool(b_rtsp_tcp), False);
 
-                    if (!waitLive555Response(DEFAULT_WAIT_TIME)){
-                        onDebug("SETUP failed!");
+					if (waitLive555Response(DEFAULT_WAIT_TIME) != RTSP_OK){
+						onDebug("SETUP failed!");
                         break;
                     }
                     else{

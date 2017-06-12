@@ -137,7 +137,7 @@ private:
     static void taskInterruptData( void *opaque );
     static void taskInterruptRTSP( void *opaque );
 
-    bool waitLive555Response( int i_timeout = 0 /* ms */ );
+    int waitLive555Response( int i_timeout = 0 /* ms */ );
 
     void controlPauseState();
     void controlSeek();
