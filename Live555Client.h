@@ -13,7 +13,6 @@
 #define RTSP_ERR		(3)
 #define RTSP_USR_STOP	(4)
 
-class RTSPClient;
 class MediaSession;
 class MyRTSPClient;
 
@@ -179,7 +178,7 @@ public:
 protected:
 	//开始播放,阻塞操作
 	int PlayRtsp(std::string Uri);
-	virtual int StopRtsp();
+	virtual void StopRtsp();
 	//流信息
 	virtual void onInitializedTrack(LiveTrack* track) {}
 

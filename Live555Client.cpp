@@ -509,16 +509,16 @@ void Live555Client::taskInterruptRTSP( void *opaque )
 void Live555Client::taskInterrupKeepAlive(void *opaque)
 {
 	Live555Client *pThis = static_cast<Live555Client*>(opaque);
-	if (pThis) return;
+	if (!pThis) return;
 
 	MyRTSPClient  *pRtsp = pThis->rtsp;
-	if (pRtsp) return;
+	if (!pRtsp) return;
 
 	MediaSession  *pMedia = pThis->m_pMediaSession;
-	if (pMedia) return;
+	if (!pMedia) return;
 
 	TaskScheduler *sch = static_cast<TaskScheduler*>(pThis->scheduler);
-	if (sch) return;
+	if (!sch) return;
 
 	char *psz_bye = NULL;
 	if (pRtsp->isSupportsGetParameter())
@@ -862,11 +862,9 @@ int Live555Client::seek(double f_time)
     return 0;
 }
 
-int Live555Client::StopRtsp()
+void Live555Client::StopRtsp()
 {
 	demuxLoopFlag = false;
-
-    return 0;
 }
 
 void Live555Client::setUser(const char* user_name, const char* password)
