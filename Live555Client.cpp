@@ -39,6 +39,8 @@ using namespace std;
 
 #define CLOCK_FREQ INT64_C(1000000)
 
+int HttpErrToRtspErr(int http);
+
 unsigned char* parseH264ConfigStr(char const* configStr,
 	unsigned int& configSize);
 uint8_t * parseVorbisConfigStr(char const* configStr,
@@ -781,7 +783,7 @@ int Live555Client::PlayRtsp(string Uri)
 	rtsp->sendOptionsCommand(&MyRTSPClient::continueAfterOPTIONS, &authenticator);
 	if (!waitLive555Response(3000)){
         Status = HttpErrToRtspErr(live555ResultCode);
-        goto err;
+        goto quit;
 	}
 
 	f_npt_start = 0;
@@ -791,7 +793,7 @@ int Live555Client::PlayRtsp(string Uri)
 
 	if (!waitLive555Response(3000)){
         Status = HttpErrToRtspErr(live555ResultCode);
-        goto err;
+        goto quit;
 	}
 
 	/* Retrieve the timeout value and set up a timeout prevention thread */
@@ -811,8 +813,9 @@ int Live555Client::PlayRtsp(string Uri)
 	b_timeout_call = true;
 	demuxLoopFlag = true;
 
-	int r = demux_loop();
+	Status = demux_loop();
 
+quit:
 	if (rtsp && m_pMediaSession)
 		rtsp->sendTeardownCommand(*m_pMediaSession, NULL);
 
@@ -834,13 +837,6 @@ int Live555Client::PlayRtsp(string Uri)
 
 	u_port_begin = 0;
 	
-	return r;
-err:
-	if (rtsp) {
-		RTSPClient::close(rtsp);
-		rtsp = nullptr;
-	}
-
 	return Status;
 }
 

@@ -14,6 +14,42 @@
 
 using namespace std;
 
+class RollStepPrinter
+{
+public:
+	void Step()
+	{
+		switch (m_Step)
+		{
+		case 0:
+			printf("\\");
+			break;
+		case 1:
+			printf("\b");
+			printf("|");
+			break;		
+		case 2:
+			printf("\b");
+			printf("-");
+			break;		
+		case 3:
+			printf("\b");
+			break;
+		case 4:
+			printf("/");
+			break;
+		case 5:
+			printf("\b");
+			break;
+		default:
+			break;
+		}
+		m_Step++;
+		if (m_Step > 5)
+			m_Step = 0;
+	}
+	int m_Step = 0;
+};
 class DemuxLive555 : public Live555Client
 {
 public:
@@ -119,7 +155,7 @@ public:
 			lastDts = dts;
 		}
 		else {
-			cout << '.';
+			m_Roll.Step();
 		}
 
 		LiveTrack::media_format& fmt = track->getFormat();
@@ -139,7 +175,7 @@ public:
 	int GetStatus() { return m_RtspStatus; }
 private:
 	int64_t lastPts = 0, lastDts = 0;
-
+	RollStepPrinter m_Roll;
 	int m_RtspStatus = RTSP_OK;
 	std::string m_UsrName;
 	std::string m_Password;
@@ -166,7 +202,7 @@ struct RtspTest
 
 int main()
 {
-	const char* normalRtspAddr  = "rtsp://192.168.103.43/ch0.liv";
+	const char* normalRtspAddr  = "rtsp://192.168.103.45/ch0.liv";
 	const char* normalRtspAddr2 = "rtsp://192.168.103.46/ch0.liv";
 	const char* NoExistRtspAddr = "rtsp://192.168.103.99/ch0.liv";
 	//1分钟以内的短文件用Live555做Server
@@ -287,7 +323,7 @@ int main()
 			demux2.Stop();
 		} },
 
-		{ 1,"测试RTSP处理EOF",[&] {
+		{ 0,"测试RTSP处理EOF",[&] {
 			DemuxLive555 demux0;
 			demux0.PrintTs = false;
 			demux0.Play(RtspAddrWileEof);
@@ -312,6 +348,18 @@ int main()
 		}
 	}
 
+
+	{
+		DemuxLive555 demux0;
+		demux0.PrintTs = false;
+		demux0.Play(normalRtspAddr);
+
+		{
+			std::this_thread::sleep_for(std::chrono::minutes(666));
+		}
+
+		demux0.Stop();
+	}
 	printf(" 测试完成\n");
 
 	cin.get();
