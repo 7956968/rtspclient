@@ -18,15 +18,15 @@ class MyRTSPClient;
 
 class Live555Client
 {
-	friend class MyRTSPClient;
+    friend class MyRTSPClient;
 public:
     class LiveTrack {
     public:
         struct media_format {
 
-			std::string	type;		/*"audio" "video" "text"*/
-			std::string codec;
-			std::string extra;		/*sps pps*/
+            std::string	type;		/*"audio" "video" "text"*/
+            std::string codec;
+            std::string extra;		/*sps pps*/
 
             uint32_t i_bitrate = 0;
 
@@ -46,8 +46,8 @@ public:
             {
                 std::string psz_language;
             }text;
-		};
-	public:
+        };
+    public:
         Live555Client* parent;
         void* media_sub_session;
 
@@ -80,7 +80,7 @@ public:
         bool discardTruncated() { return b_discard_trunc; }
         void* getMediaSubsession() { return media_sub_session; }
         std::string getSessionId() const;
-		std::string getSessionName() const;
+        std::string getSessionName() const;
         void setNPT(double npt) { f_npt = npt; }
         double getNPT() { return f_npt; }
 
@@ -92,21 +92,21 @@ public:
                         unsigned int i_truncated_bytes, struct timeval pts,
                         unsigned int duration );
         static void streamClose(void *opaque );
-		virtual void onDebug(const char* msg) {}
+        virtual void onDebug(const char* msg) {}
     };
 private:
     void* env;
     void* scheduler;
-	MyRTSPClient* rtsp;
-	MediaSession* m_pMediaSession;
-	void* taskKeepAlive;
+    MyRTSPClient* rtsp;
+    MediaSession* m_pMediaSession;
+    void* taskKeepAlive;
 
     char  event_rtsp;
     char  event_data;
 
     bool  b_get_param;
 
-	int				 live555ResultCode;/* live555返回的http状态值 */
+    int				 live555ResultCode;/* live555返回的http状态值 */
     unsigned int     i_timeout;     /* session timeout value in seconds */
 
     int64_t          i_pcr; /* The clock */
@@ -126,15 +126,15 @@ private:
     unsigned short   u_port_begin;  /* RTP port that client will be use */
 
     std::string user_agent;
-	std::string user_name;
-	std::string password;
-	std::vector<LiveTrack*> listTracks;
+    std::string user_name;
+    std::string password;
+    std::vector<LiveTrack*> listTracks;
 
-	volatile bool demuxLoopFlag;
+    volatile bool demuxLoopFlag;
 
     static void taskInterruptData( void *opaque );
     static void taskInterruptRTSP( void *opaque );
-	static void taskInterrupKeepAlive(void *opaque);
+    static void taskInterrupKeepAlive(void *opaque);
 
     int waitLive555Response( int i_timeout = 0 /* ms */ );
 
@@ -144,14 +144,14 @@ private:
     int demux(void);
     int demux_loop();
 
-	void onStreamRead(LiveTrack* track, unsigned int i_size,
-		unsigned int i_truncated_bytes, struct timeval pts,
-		unsigned int duration);
-	// callback functions
-	void continueAfterDESCRIBE(int result_code, char* result_string);
-	void continueAfterOPTIONS(int result_code, char* result_string);
-	void live555Callback(int result_code);
-	void onStreamClose(LiveTrack* track);
+    void onStreamRead(LiveTrack* track, unsigned int i_size,
+        unsigned int i_truncated_bytes, struct timeval pts,
+        unsigned int duration);
+    // callback functions
+    void continueAfterDESCRIBE(int result_code, char* result_string);
+    void continueAfterOPTIONS(int result_code, char* result_string);
+    void live555Callback(int result_code);
+    void onStreamClose(LiveTrack* track);
 
 public:
     Live555Client(void);
@@ -165,28 +165,28 @@ public:
 
     bool isPaused() const { return b_is_paused; }
 
-	void setUseTcp(bool bUseTcp) { b_rtsp_tcp = bUseTcp; }
+    void setUseTcp(bool bUseTcp) { b_rtsp_tcp = bUseTcp; }
     void setUser(const char* user_name, const char* password);
-	void setUserAgent(const char* user_agent) { user_agent = user_agent; }
-	/* double ports ,like 7000-7001, another for rtcp*/
-	void setDestination(std::string Addr, int DstPort);
-	void clearDestination() { setDestination("", 0); }
+    void setUserAgent(const char* user_agent) { user_agent = user_agent; }
+    /* double ports ,like 7000-7001, another for rtcp*/
+    void setDestination(std::string Addr, int DstPort);
+    void clearDestination() { setDestination("", 0); }
 
     void setRTPPortBegin(unsigned short port_begin) { u_port_begin = port_begin; }
     unsigned short getRTPPortNoUse() { return u_port_begin; }
 
 protected:
-	//开始播放,阻塞操作
-	int PlayRtsp(std::string Uri);
-	virtual void StopRtsp();
-	//流信息
-	virtual void onInitializedTrack(LiveTrack* track) {}
+    //开始播放,阻塞操作
+    int PlayRtsp(std::string Uri);
+    virtual void StopRtsp();
+    //流信息
+    virtual void onInitializedTrack(LiveTrack* track) {}
 
-	//一帧数据
-	virtual void onData(LiveTrack* track, uint8_t* p_buffer, int i_size, int i_truncated_bytes, int64_t pts, int64_t dts) {}
-	virtual void onResetPcr() {}
+    //一帧数据
+    virtual void onData(LiveTrack* track, uint8_t* p_buffer, int i_size, int i_truncated_bytes, int64_t pts, int64_t dts) {}
+    virtual void onResetPcr() {}
 
-	virtual void onDebug(const char* msg) {}
+    virtual void onDebug(const char* msg) {}
 };
 
 #endif//LIVE555_CLIENT_H__

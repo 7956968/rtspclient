@@ -34,64 +34,64 @@ using namespace std;
 
 int HttpErrToRtspErr(int http);
 unsigned char* parseH264ConfigStr(char const* configStr,
-	unsigned int& configSize);
+    unsigned int& configSize);
 uint8_t * parseVorbisConfigStr(char const* configStr,
-	unsigned int& configSize);
+    unsigned int& configSize);
 
 static /* Base64 decoding */
 size_t vlc_b64_decode_binary_to_buffer(uint8_t *p_dst, size_t i_dst, const char *p_src)
 {
-	static const int b64[256] = {
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 00-0F */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 10-1F */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,63,  /* 20-2F */
-		52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,  /* 30-3F */
-		-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,  /* 40-4F */
-		15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,-1,  /* 50-5F */
-		-1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,  /* 60-6F */
-		41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1,  /* 70-7F */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 80-8F */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 90-9F */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* A0-AF */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* B0-BF */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* C0-CF */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* D0-DF */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* E0-EF */
-		-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1   /* F0-FF */
-	};
-	uint8_t *p_start = p_dst;
-	uint8_t *p = (uint8_t *)p_src;
+    static const int b64[256] = {
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 00-0F */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 10-1F */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,63,  /* 20-2F */
+        52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,  /* 30-3F */
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,  /* 40-4F */
+        15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,-1,  /* 50-5F */
+        -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,  /* 60-6F */
+        41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1,  /* 70-7F */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 80-8F */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 90-9F */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* A0-AF */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* B0-BF */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* C0-CF */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* D0-DF */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* E0-EF */
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1   /* F0-FF */
+    };
+    uint8_t *p_start = p_dst;
+    uint8_t *p = (uint8_t *)p_src;
 
-	int i_level;
-	int i_last;
+    int i_level;
+    int i_last;
 
-	for (i_level = 0, i_last = 0; (size_t)(p_dst - p_start) < i_dst && *p != '\0'; p++)
-	{
-		const int c = b64[(unsigned int)*p];
-		if (c == -1)
-			break;
+    for (i_level = 0, i_last = 0; (size_t)(p_dst - p_start) < i_dst && *p != '\0'; p++)
+    {
+        const int c = b64[(unsigned int)*p];
+        if (c == -1)
+            break;
 
-		switch (i_level)
-		{
-		case 0:
-			i_level++;
-			break;
-		case 1:
-			*p_dst++ = (i_last << 2) | ((c >> 4) & 0x03);
-			i_level++;
-			break;
-		case 2:
-			*p_dst++ = ((i_last << 4) & 0xf0) | ((c >> 2) & 0x0f);
-			i_level++;
-			break;
-		case 3:
-			*p_dst++ = ((i_last & 0x03) << 6) | c;
-			i_level = 0;
-		}
-		i_last = c;
-	}
+        switch (i_level)
+        {
+        case 0:
+            i_level++;
+            break;
+        case 1:
+            *p_dst++ = (i_last << 2) | ((c >> 4) & 0x03);
+            i_level++;
+            break;
+        case 2:
+            *p_dst++ = ((i_last << 4) & 0xf0) | ((c >> 2) & 0x0f);
+            i_level++;
+            break;
+        case 3:
+            *p_dst++ = ((i_last & 0x03) << 6) | c;
+            i_level = 0;
+        }
+        i_last = c;
+    }
 
-	return p_dst - p_start;
+    return p_dst - p_start;
 }
 
 
@@ -102,10 +102,10 @@ class MyRTSPClient : public RTSPClient
 protected:
     Live555Client* parent;
     Boolean fSupportsGetParameter;
-	string destination;
-	int destPort = 0;
+    string destination;
+    int destPort = 0;
 
-	PresentationTimeSessionNormalizer* PtsSessionNormalizer = nullptr;
+    PresentationTimeSessionNormalizer* PtsSessionNormalizer = nullptr;
 public:
     MyRTSPClient( UsageEnvironment& env, char const* rtspURL, int verbosityLevel,
                    char const* applicationName, portNumBits tunnelOverHTTPPortNum,
@@ -118,30 +118,30 @@ public:
                    )
                    , parent (p_sys)
                    , fSupportsGetParameter(False)
-				   , PtsSessionNormalizer(new PresentationTimeSessionNormalizer(env))
+                   , PtsSessionNormalizer(new PresentationTimeSessionNormalizer(env))
     {
     }
-	~MyRTSPClient()
-	{
-		if (PtsSessionNormalizer) {
-			Medium::close(PtsSessionNormalizer);
-		}
-	}
+    ~MyRTSPClient()
+    {
+        if (PtsSessionNormalizer) {
+            Medium::close(PtsSessionNormalizer);
+        }
+    }
 
-	virtual Boolean setRequestFields(RequestRecord* request,
-		char*& cmdURL, Boolean& cmdURLWasAllocated,
-		char const*& protocolStr,
-		char*& extraHeaders, Boolean& extraHeadersWereAllocated);
+    virtual Boolean setRequestFields(RequestRecord* request,
+        char*& cmdURL, Boolean& cmdURLWasAllocated,
+        char const*& protocolStr,
+        char*& extraHeaders, Boolean& extraHeadersWereAllocated);
 
-	void setDestination(string Addr, int DstPort);
+    void setDestination(string Addr, int DstPort);
 
-	PresentationTimeSubsessionNormalizer*
-		createNewPresentationTimeSubsessionNormalizer(FramedSource* inputSource, 
-			RTPSource* rtpSource, 
-			char const* codecName);
-	static void continueAfterDESCRIBE(RTSPClient* client, int result_code, char* result_string);
-	static void continueAfterOPTIONS(RTSPClient* client, int result_code, char* result_string);
-	static void default_live555_callback(RTSPClient* client, int result_code, char* result_string);
+    PresentationTimeSubsessionNormalizer*
+        createNewPresentationTimeSubsessionNormalizer(FramedSource* inputSource, 
+            RTPSource* rtpSource, 
+            char const* codecName);
+    static void continueAfterDESCRIBE(RTSPClient* client, int result_code, char* result_string);
+    static void continueAfterOPTIONS(RTSPClient* client, int result_code, char* result_string);
+    static void default_live555_callback(RTSPClient* client, int result_code, char* result_string);
 
     void setSupportsGetParameter(Boolean val) { fSupportsGetParameter = val; }
     Boolean isSupportsGetParameter() { return fSupportsGetParameter; }
@@ -149,98 +149,98 @@ public:
 
 void MyRTSPClient::setDestination(string Addr, int DstPort)
 {
-	destination = Addr;
-	destPort = DstPort;
+    destination = Addr;
+    destPort = DstPort;
 }
 
 PresentationTimeSubsessionNormalizer*
 MyRTSPClient::createNewPresentationTimeSubsessionNormalizer(FramedSource* inputSource,
-	RTPSource* rtpSource,
-	char const* codecName)
+    RTPSource* rtpSource,
+    char const* codecName)
 {
-	if (PtsSessionNormalizer) {
-		return PtsSessionNormalizer->createNewPresentationTimeSubsessionNormalizer(inputSource, rtpSource, codecName);
-	}
+    if (PtsSessionNormalizer) {
+        return PtsSessionNormalizer->createNewPresentationTimeSubsessionNormalizer(inputSource, rtpSource, codecName);
+    }
 
-	return nullptr;
+    return nullptr;
 }
 
 Boolean MyRTSPClient::setRequestFields(RTSPClient::RequestRecord* request,
-	char*& cmdURL, Boolean& cmdURLWasAllocated,
-	char const*& protocolStr,
-	char*& extraHeaders, Boolean& extraHeadersWereAllocated) {
+    char*& cmdURL, Boolean& cmdURLWasAllocated,
+    char const*& protocolStr,
+    char*& extraHeaders, Boolean& extraHeadersWereAllocated) {
 
-	if ((destination.size() > 0) && (strcmp(request->commandName(), "SETUP") == 0)) {  //只覆盖SETUP消息,其它消息仍然使用RTSPClient::setRequestFields()
-		extraHeaders = new char[256];
-		extraHeadersWereAllocated = True;
+    if ((destination.size() > 0) && (strcmp(request->commandName(), "SETUP") == 0)) {  //只覆盖SETUP消息,其它消息仍然使用RTSPClient::setRequestFields()
+        extraHeaders = new char[256];
+        extraHeadersWereAllocated = True;
 
-		Boolean streamUsingTCP = (request->booleanFlags() & 0x1) != 0;
-		if (streamUsingTCP) {
-			if (strcmp(request->subsession()->protocolName(), "UDP") == 0)
-				sprintf(extraHeaders, "Transport: RAW/RAW/UDP;unicast;interleaved=0-1;destination=%s;client_port=%d-%d\r\n",
-					destination.c_str(), destPort, destPort + 1);
-			else
-				sprintf(extraHeaders, "Transport: RTP/AVP;unicast;interleaved=0-1;destination=%s;client_port=%d-%d\r\n",
-					destination.c_str(), destPort, destPort + 1);
-		}
-		else {
-			sprintf(extraHeaders, "Transport: RTP/TCP;unicast;interleaved=0-1;destination=%s;client_port=%d-%d\r\n",
-				destination.c_str(), destPort, destPort + 1);
-		}
-		return True;
-	}
+        Boolean streamUsingTCP = (request->booleanFlags() & 0x1) != 0;
+        if (streamUsingTCP) {
+            if (strcmp(request->subsession()->protocolName(), "UDP") == 0)
+                sprintf(extraHeaders, "Transport: RAW/RAW/UDP;unicast;interleaved=0-1;destination=%s;client_port=%d-%d\r\n",
+                    destination.c_str(), destPort, destPort + 1);
+            else
+                sprintf(extraHeaders, "Transport: RTP/AVP;unicast;interleaved=0-1;destination=%s;client_port=%d-%d\r\n",
+                    destination.c_str(), destPort, destPort + 1);
+        }
+        else {
+            sprintf(extraHeaders, "Transport: RTP/TCP;unicast;interleaved=0-1;destination=%s;client_port=%d-%d\r\n",
+                destination.c_str(), destPort, destPort + 1);
+        }
+        return True;
+    }
 
-	return RTSPClient::setRequestFields(request, cmdURL, cmdURLWasAllocated, protocolStr, extraHeaders, extraHeadersWereAllocated);
+    return RTSPClient::setRequestFields(request, cmdURL, cmdURLWasAllocated, protocolStr, extraHeaders, extraHeadersWereAllocated);
 }
 
 void MyRTSPClient::continueAfterDESCRIBE(RTSPClient* client, int result_code, char* result_string)
 {
-	MyRTSPClient* pThis = static_cast<MyRTSPClient*>(client);
-	pThis->parent->continueAfterDESCRIBE(result_code, result_string);
-	delete[] result_string;
+    MyRTSPClient* pThis = static_cast<MyRTSPClient*>(client);
+    pThis->parent->continueAfterDESCRIBE(result_code, result_string);
+    delete[] result_string;
 }
 
 void MyRTSPClient::continueAfterOPTIONS(RTSPClient* client, int result_code, char* result_string)
 {
-	MyRTSPClient* pThis = static_cast<MyRTSPClient*>(client);
+    MyRTSPClient* pThis = static_cast<MyRTSPClient*>(client);
 
-	Boolean serverSupportsGetParameter = RTSPOptionIsSupported("GET_PARAMETER", result_string);
-	pThis->setSupportsGetParameter(serverSupportsGetParameter);
-	pThis->parent->continueAfterOPTIONS(result_code, result_string);
-	delete[] result_string;
+    Boolean serverSupportsGetParameter = RTSPOptionIsSupported("GET_PARAMETER", result_string);
+    pThis->setSupportsGetParameter(serverSupportsGetParameter);
+    pThis->parent->continueAfterOPTIONS(result_code, result_string);
+    delete[] result_string;
 }
 
 void MyRTSPClient::default_live555_callback(RTSPClient* client, int result_code, char* result_string)
 {
-	MyRTSPClient* pThis = static_cast<MyRTSPClient*>(client);
-	delete[]result_string;
-	pThis->parent->live555Callback(result_code);
-	//这里好好处理一下转换成我们的错误值
+    MyRTSPClient* pThis = static_cast<MyRTSPClient*>(client);
+    delete[]result_string;
+    pThis->parent->live555Callback(result_code);
+    //这里好好处理一下转换成我们的错误值
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 Live555Client::LiveTrack::LiveTrack(Live555Client* p_sys, void* sub, int buffer_size)
-	: parent(p_sys)
-	, media_sub_session(sub)
-	, i_buffer(buffer_size)
+    : parent(p_sys)
+    , media_sub_session(sub)
+    , i_buffer(buffer_size)
 {
-	b_quicktime = false;
-	b_asf = false;
-	b_muxed = false;
-	b_discard_trunc = false;
+    b_quicktime = false;
+    b_asf = false;
+    b_muxed = false;
+    b_discard_trunc = false;
 
-	waiting = 0;
-	b_rtcp_sync = false;
-	i_pts = VLC_TS_INVALID;
-	f_npt = 0.;
+    waiting = 0;
+    b_rtcp_sync = false;
+    i_pts = VLC_TS_INVALID;
+    f_npt = 0.;
 }
 
 Live555Client::LiveTrack::~LiveTrack()
 {
-	if (p_buffer) {
-		delete[] p_buffer;
-		p_buffer = NULL;
-	}
+    if (p_buffer) {
+        delete[] p_buffer;
+        p_buffer = NULL;
+    }
 }
 
 
@@ -252,189 +252,189 @@ int Live555Client::LiveTrack::init()
     if (!p_buffer)
         return RTSP_ERR;
 
-	fmt.type  = sub->mediumName();
-	fmt.codec = sub->codecName();
-	if (fmt.type == "audio") {
+    fmt.type  = sub->mediumName();
+    fmt.codec = sub->codecName();
+    if (fmt.type == "audio") {
 
-		fmt.audio.i_channels = sub->numChannels();
-		fmt.audio.i_rate = sub->rtpTimestampFrequency();
+        fmt.audio.i_channels = sub->numChannels();
+        fmt.audio.i_rate = sub->rtpTimestampFrequency();
 
-		if ((fmt.codec == "MPA") ||
-			(fmt.codec == "MPA-ROBUST") ||
-			(fmt.codec == "X-MP3-DRAFT-00") ||
-			(fmt.codec == "AC3")) {
-			fmt.audio.i_rate = 0;
-		}
-		else if (fmt.codec == "L16"){
-			fmt.audio.i_bitspersample = 16;
-		}
-		else if (fmt.codec == "L20"){
-			fmt.audio.i_bitspersample = 20;
-		}
-		else if (fmt.codec == "L24"){
-			fmt.audio.i_bitspersample = 24;
-		}
-		else if (fmt.codec == "L8"){
-			fmt.audio.i_bitspersample = 8;
-		}
-		else if (fmt.codec == "DAT12"){
-			fmt.audio.i_bitspersample = 12;
-		}
-		else if (fmt.codec == "PCMU"){
-			fmt.audio.i_bitspersample = 8;
-		}
-		else if (fmt.codec == "PCMA"){
-			fmt.audio.i_bitspersample = 8;
-		}
-		else if (fmt.codec == "G726")  {
-			fmt.audio.i_rate = 8000;
-			fmt.audio.i_channels = 1;
-			if (!strcmp(sub->codecName() + 5, "40"))
-				fmt.i_bitrate = 40000;
-			else if (!strcmp(sub->codecName() + 5, "32"))
-				fmt.i_bitrate = 32000;
-			else if (!strcmp(sub->codecName() + 5, "24"))
-				fmt.i_bitrate = 24000;
-			else if (!strcmp(sub->codecName() + 5, "16"))
-				fmt.i_bitrate = 16000;
-		}
-		else if (fmt.codec == "MP4A-LATM") {
-			unsigned int i_extra;
-			uint8_t      *p_extra;
+        if ((fmt.codec == "MPA") ||
+            (fmt.codec == "MPA-ROBUST") ||
+            (fmt.codec == "X-MP3-DRAFT-00") ||
+            (fmt.codec == "AC3")) {
+            fmt.audio.i_rate = 0;
+        }
+        else if (fmt.codec == "L16"){
+            fmt.audio.i_bitspersample = 16;
+        }
+        else if (fmt.codec == "L20"){
+            fmt.audio.i_bitspersample = 20;
+        }
+        else if (fmt.codec == "L24"){
+            fmt.audio.i_bitspersample = 24;
+        }
+        else if (fmt.codec == "L8"){
+            fmt.audio.i_bitspersample = 8;
+        }
+        else if (fmt.codec == "DAT12"){
+            fmt.audio.i_bitspersample = 12;
+        }
+        else if (fmt.codec == "PCMU"){
+            fmt.audio.i_bitspersample = 8;
+        }
+        else if (fmt.codec == "PCMA"){
+            fmt.audio.i_bitspersample = 8;
+        }
+        else if (fmt.codec == "G726")  {
+            fmt.audio.i_rate = 8000;
+            fmt.audio.i_channels = 1;
+            if (!strcmp(sub->codecName() + 5, "40"))
+                fmt.i_bitrate = 40000;
+            else if (!strcmp(sub->codecName() + 5, "32"))
+                fmt.i_bitrate = 32000;
+            else if (!strcmp(sub->codecName() + 5, "24"))
+                fmt.i_bitrate = 24000;
+            else if (!strcmp(sub->codecName() + 5, "16"))
+                fmt.i_bitrate = 16000;
+        }
+        else if (fmt.codec == "MP4A-LATM") {
+            unsigned int i_extra;
+            uint8_t      *p_extra;
 
-			if ((p_extra = parseStreamMuxConfigStr(sub->fmtp_config(),
-				i_extra)))
-			{
-				fmt.extra = string((char*)p_extra, i_extra);
-				delete[] p_extra;
-			}
-			/* Because the "faad" decoder does not handle the LATM
-			* data length field at the start of each returned LATM
-			* frame, tell the RTP source to omit. */
-			((MPEG4LATMAudioRTPSource*)sub->rtpSource())->omitLATMDataLengthField();
-		}
-		else if (fmt.codec == "MPEG4-GENERIC") {
-			unsigned int i_extra;
-			uint8_t      *p_extra;
+            if ((p_extra = parseStreamMuxConfigStr(sub->fmtp_config(),
+                i_extra)))
+            {
+                fmt.extra = string((char*)p_extra, i_extra);
+                delete[] p_extra;
+            }
+            /* Because the "faad" decoder does not handle the LATM
+            * data length field at the start of each returned LATM
+            * frame, tell the RTP source to omit. */
+            ((MPEG4LATMAudioRTPSource*)sub->rtpSource())->omitLATMDataLengthField();
+        }
+        else if (fmt.codec == "MPEG4-GENERIC") {
+            unsigned int i_extra;
+            uint8_t      *p_extra;
 
-			if ((p_extra = parseGeneralConfigStr(sub->fmtp_config(),
-				i_extra)))
-			{
-				fmt.extra = string((char*)p_extra, i_extra);
-				delete[] p_extra;
-			}
-		}
-		else if (fmt.codec == "SPEEX") {
-			if (fmt.audio.i_rate == 0)
-			{
-				onDebug("Using 8kHz as default sample rate.");
-				fmt.audio.i_rate = 8000;
-			}
-		}
-		else if (fmt.codec == "VORBIS") {
-			unsigned int i_extra;
-			unsigned char *p_extra;
-			if ((p_extra = parseVorbisConfigStr(sub->fmtp_config(),
-				i_extra)))
-			{
-				fmt.extra = string((char*)p_extra, i_extra);
-				delete[] p_extra;
-			}
-		}
+            if ((p_extra = parseGeneralConfigStr(sub->fmtp_config(),
+                i_extra)))
+            {
+                fmt.extra = string((char*)p_extra, i_extra);
+                delete[] p_extra;
+            }
+        }
+        else if (fmt.codec == "SPEEX") {
+            if (fmt.audio.i_rate == 0)
+            {
+                onDebug("Using 8kHz as default sample rate.");
+                fmt.audio.i_rate = 8000;
+            }
+        }
+        else if (fmt.codec == "VORBIS") {
+            unsigned int i_extra;
+            unsigned char *p_extra;
+            if ((p_extra = parseVorbisConfigStr(sub->fmtp_config(),
+                i_extra)))
+            {
+                fmt.extra = string((char*)p_extra, i_extra);
+                delete[] p_extra;
+            }
+        }
 
-	}
-	else if (fmt.type == "video") {
-		if (fmt.codec == "MPV")
-		{
-			fmt.b_packetized = false;
-		}
-		else if (fmt.codec == "H264")
-		{
-			unsigned int i_extra = 0;
-			uint8_t      *p_extra = NULL;
+    }
+    else if (fmt.type == "video") {
+        if (fmt.codec == "MPV")
+        {
+            fmt.b_packetized = false;
+        }
+        else if (fmt.codec == "H264")
+        {
+            unsigned int i_extra = 0;
+            uint8_t      *p_extra = NULL;
 
-			fmt.b_packetized = false;
+            fmt.b_packetized = false;
 
-			if ((p_extra = parseH264ConfigStr(sub->fmtp_spropparametersets(),
-				i_extra)))
-			{
-				fmt.extra = string((char*)p_extra, i_extra);
-				delete[] p_extra;
-			}
-		}
+            if ((p_extra = parseH264ConfigStr(sub->fmtp_spropparametersets(),
+                i_extra)))
+            {
+                fmt.extra = string((char*)p_extra, i_extra);
+                delete[] p_extra;
+            }
+        }
 #if LIVEMEDIA_LIBRARY_VERSION_INT >= 1393372800 // 2014.02.26
-		else if (fmt.codec == "H265")
-		{
-			unsigned int i_extra1 = 0, i_extra2 = 0, i_extra3 = 0, i_extraTot;
-			uint8_t      *p_extra1 = NULL, *p_extra2 = NULL, *p_extra3 = NULL;
+        else if (fmt.codec == "H265")
+        {
+            unsigned int i_extra1 = 0, i_extra2 = 0, i_extra3 = 0, i_extraTot;
+            uint8_t      *p_extra1 = NULL, *p_extra2 = NULL, *p_extra3 = NULL;
 
-			fmt.b_packetized = false;
+            fmt.b_packetized = false;
 
-			p_extra1 = parseH264ConfigStr(sub->fmtp_spropvps(), i_extra1);
-			p_extra2 = parseH264ConfigStr(sub->fmtp_spropsps(), i_extra2);
-			p_extra3 = parseH264ConfigStr(sub->fmtp_sproppps(), i_extra3);
-			i_extraTot = i_extra1 + i_extra2 + i_extra3;
-			if (i_extraTot > 0)
-			{
-				if (p_extra1)
-				{
-					fmt.extra = string((char*)p_extra1, i_extra1);
-					delete[] p_extra1;
-				}
-				if (p_extra2)
-				{
-					fmt.extra += string((char*)p_extra2, i_extra2);
-					delete[] p_extra2;
-				}
-				if (p_extra3)
-				{
-					fmt.extra += string((char*)p_extra3, i_extra3);
-					delete[] p_extra3;
-				}
-			}
-		}
+            p_extra1 = parseH264ConfigStr(sub->fmtp_spropvps(), i_extra1);
+            p_extra2 = parseH264ConfigStr(sub->fmtp_spropsps(), i_extra2);
+            p_extra3 = parseH264ConfigStr(sub->fmtp_sproppps(), i_extra3);
+            i_extraTot = i_extra1 + i_extra2 + i_extra3;
+            if (i_extraTot > 0)
+            {
+                if (p_extra1)
+                {
+                    fmt.extra = string((char*)p_extra1, i_extra1);
+                    delete[] p_extra1;
+                }
+                if (p_extra2)
+                {
+                    fmt.extra += string((char*)p_extra2, i_extra2);
+                    delete[] p_extra2;
+                }
+                if (p_extra3)
+                {
+                    fmt.extra += string((char*)p_extra3, i_extra3);
+                    delete[] p_extra3;
+                }
+            }
+        }
 #endif
-		else if (fmt.codec == "MP4V-ES")
-		{
-			unsigned int i_extra;
-			uint8_t      *p_extra;
+        else if (fmt.codec == "MP4V-ES")
+        {
+            unsigned int i_extra;
+            uint8_t      *p_extra;
 
-			if ((p_extra = parseGeneralConfigStr(sub->fmtp_config(),
-				i_extra)))
-			{
-				fmt.extra = string((char*)p_extra, i_extra);
-				delete[] p_extra;
-			}
-		}
-		else if ((fmt.codec == "X-QT")        ||
-			     (fmt.codec == "X-QUICKTIME") ||
-			     (fmt.codec == "X-QDM")       ||
-			     (fmt.codec == "X-SV3V-ES")   ||
-			     (fmt.codec == "X-SORENSONVIDEO"))
-		{
-			b_quicktime = true;
-		}
-		else if (fmt.codec == "DV")
-		{
-			b_discard_trunc = true;
-		}
-		else if (fmt.codec == "THEORA")
-		{
-			unsigned int i_extra;
-			uint8_t      *p_extra;
+            if ((p_extra = parseGeneralConfigStr(sub->fmtp_config(),
+                i_extra)))
+            {
+                fmt.extra = string((char*)p_extra, i_extra);
+                delete[] p_extra;
+            }
+        }
+        else if ((fmt.codec == "X-QT")        ||
+                 (fmt.codec == "X-QUICKTIME") ||
+                 (fmt.codec == "X-QDM")       ||
+                 (fmt.codec == "X-SV3V-ES")   ||
+                 (fmt.codec == "X-SORENSONVIDEO"))
+        {
+            b_quicktime = true;
+        }
+        else if (fmt.codec == "DV")
+        {
+            b_discard_trunc = true;
+        }
+        else if (fmt.codec == "THEORA")
+        {
+            unsigned int i_extra;
+            uint8_t      *p_extra;
 
-			if ((p_extra = parseVorbisConfigStr(sub->fmtp_config(),
-				i_extra)))
-			{
-				fmt.extra = string((char*)p_extra, i_extra);
-				delete[] p_extra;
-			}
-			else
-				onDebug("Missing or unsupported theora header.");
-		}
+            if ((p_extra = parseVorbisConfigStr(sub->fmtp_config(),
+                i_extra)))
+            {
+                fmt.extra = string((char*)p_extra, i_extra);
+                delete[] p_extra;
+            }
+            else
+                onDebug("Missing or unsupported theora header.");
+        }
 
-	}
-	
+    }
+    
     /* Try and parse a=lang: attribute */
     const char* p_lang = strstr( sub->savedSDPLines(), "a=lang:" );
     if( p_lang )
@@ -508,33 +508,33 @@ void Live555Client::taskInterruptRTSP( void *opaque )
 
 void Live555Client::taskInterrupKeepAlive(void *opaque)
 {
-	Live555Client *pThis = static_cast<Live555Client*>(opaque);
-	if (!pThis) return;
+    Live555Client *pThis = static_cast<Live555Client*>(opaque);
+    if (!pThis) return;
 
-	MyRTSPClient  *pRtsp = pThis->rtsp;
-	if (!pRtsp) return;
+    MyRTSPClient  *pRtsp = pThis->rtsp;
+    if (!pRtsp) return;
 
-	MediaSession  *pMedia = pThis->m_pMediaSession;
-	if (!pMedia) return;
+    MediaSession  *pMedia = pThis->m_pMediaSession;
+    if (!pMedia) return;
 
-	TaskScheduler *sch = static_cast<TaskScheduler*>(pThis->scheduler);
-	if (!sch) return;
+    TaskScheduler *sch = static_cast<TaskScheduler*>(pThis->scheduler);
+    if (!sch) return;
 
-	char *psz_bye = NULL;
-	if (pRtsp->isSupportsGetParameter())
-		pRtsp->sendGetParameterCommand(*pMedia, NULL, psz_bye);
-	else {
-		if (pThis->user_name.length() > 0 && (pThis->password.length()) > 0) {
-			Authenticator authenticator;
-			authenticator.setUsernameAndPassword(pThis->user_name.c_str(), pThis->password.c_str());
-			pRtsp->sendOptionsCommand(NULL, &authenticator);
-		}
-		else {
-			pRtsp->sendOptionsCommand(NULL, NULL);
-		}
-	}
+    char *psz_bye = NULL;
+    if (pRtsp->isSupportsGetParameter())
+        pRtsp->sendGetParameterCommand(*pMedia, NULL, psz_bye);
+    else {
+        if (pThis->user_name.length() > 0 && (pThis->password.length()) > 0) {
+            Authenticator authenticator;
+            authenticator.setUsernameAndPassword(pThis->user_name.c_str(), pThis->password.c_str());
+            pRtsp->sendOptionsCommand(NULL, &authenticator);
+        }
+        else {
+            pRtsp->sendOptionsCommand(NULL, NULL);
+        }
+    }
 
-	sch->rescheduleDelayedTask(pThis->taskKeepAlive, 3000000, (TaskFunc*)taskInterrupKeepAlive, opaque);
+    sch->rescheduleDelayedTask(pThis->taskKeepAlive, 3000000, (TaskFunc*)taskInterrupKeepAlive, opaque);
 }
 
 int Live555Client::waitLive555Response( int i_timeout /* ms */ )
@@ -550,7 +550,7 @@ int Live555Client::waitLive555Response( int i_timeout /* ms */ )
                                                       this );
     }
     event_rtsp = 0;
-	live555ResultCode = HTTP_OK;
+    live555ResultCode = HTTP_OK;
     sch->doEventLoop( &event_rtsp );
     //here, if b_error is true and i_live555_ret = 0 we didn't receive a response
     if(task)
@@ -626,8 +626,8 @@ int Live555Client::demux(void)
             p_buffer++;
         }
         else if( tk->getFormat().codec == "H261" || 
-			     tk->getFormat().codec == "H264" || 
-			     tk->getFormat().codec == "H265" )
+                 tk->getFormat().codec == "H264" || 
+                 tk->getFormat().codec == "H265" )
         {
             p_buffer += 4;
         }
@@ -652,11 +652,11 @@ int Live555Client::demux(void)
     /* Check for gap in pts value */
      for (auto it = listTracks.begin(); it != listTracks.end(); ++it)
      {
-		LiveTrack *tk = *it;
-		MediaSubsession* sub = static_cast<MediaSubsession*>(tk->getMediaSubsession());
+        LiveTrack *tk = *it;
+        MediaSubsession* sub = static_cast<MediaSubsession*>(tk->getMediaSubsession());
 
-		if( !tk->b_muxed && !tk->b_rtcp_sync && sub->rtpSource() && sub->rtpSource()->hasBeenSynchronizedUsingRTCP() )
-		{
+        if( !tk->b_muxed && !tk->b_rtcp_sync && sub->rtpSource() && sub->rtpSource()->hasBeenSynchronizedUsingRTCP() )
+        {
              onDebug("tk->rtpSource->hasBeenSynchronizedUsingRTCP()" );
 
              onResetPcr();
@@ -689,7 +689,7 @@ int Live555Client::demux(void)
 
 int Live555Client::demux_loop()
 {
-	demuxLoopFlag = true;
+    demuxLoopFlag = true;
 
     while (demuxLoopFlag)
     {
@@ -704,16 +704,16 @@ int Live555Client::demux_loop()
 
         int r = demux();
         if (r != RTSP_OK){
-			return r;
+            return r;
         }
-		if (live555ResultCode != 0) {
-			r = HttpErrToRtspErr(live555ResultCode);
-			return r;
-		}
+        if (live555ResultCode != 0) {
+            r = HttpErrToRtspErr(live555ResultCode);
+            return r;
+        }
     }
 
-	//用户主动关闭
-	return RTSP_USR_STOP;
+    //用户主动关闭
+    return RTSP_USR_STOP;
 }
 
 Live555Client::Live555Client(void)
@@ -726,7 +726,7 @@ Live555Client::Live555Client(void)
     , b_get_param(false)
     , live555ResultCode(0)
     , i_timeout(60)
-	, taskKeepAlive(NULL)
+    , taskKeepAlive(NULL)
     , i_pcr(VLC_TS_0)
     , f_seekTime(-1.0)
     , f_npt(0)
@@ -740,104 +740,104 @@ Live555Client::Live555Client(void)
     , demuxLoopFlag(false)
     , b_rtsp_tcp(true)
 {
-	scheduler = BasicTaskScheduler::createNew();
-	env = BasicUsageEnvironment::createNew(*(TaskScheduler*)scheduler);
+    scheduler = BasicTaskScheduler::createNew();
+    env = BasicUsageEnvironment::createNew(*(TaskScheduler*)scheduler);
 }
 
 Live555Client::~Live555Client(void)
 {
-	StopRtsp();
+    StopRtsp();
 
-	UsageEnvironment* environment = static_cast<UsageEnvironment*>(env);
-	TaskScheduler* sch = static_cast<TaskScheduler*>(scheduler);
-	environment->reclaim();
-	delete sch;
+    UsageEnvironment* environment = static_cast<UsageEnvironment*>(env);
+    TaskScheduler* sch = static_cast<TaskScheduler*>(scheduler);
+    environment->reclaim();
+    delete sch;
 }
 
 int Live555Client::PlayRtsp(string Uri)
 {
-	if (Uri.length() == 0) {
-		return RTSP_ERR;
-	}
+    if (Uri.length() == 0) {
+        return RTSP_ERR;
+    }
 
-	int Status = RTSP_OK;
+    int Status = RTSP_OK;
 
-	Authenticator authenticator;
-	UsageEnvironment* environment = static_cast<UsageEnvironment*>(env);
-	TaskScheduler* sch = static_cast<TaskScheduler*>(scheduler);
+    Authenticator authenticator;
+    UsageEnvironment* environment = static_cast<UsageEnvironment*>(env);
+    TaskScheduler* sch = static_cast<TaskScheduler*>(scheduler);
 
-	rtsp = new MyRTSPClient(*environment, Uri.c_str(), 0, user_agent.c_str(), 0, this);
-	if (!rtsp) {
-		return RTSP_ERR;
-	}
+    rtsp = new MyRTSPClient(*environment, Uri.c_str(), 0, user_agent.c_str(), 0, this);
+    if (!rtsp) {
+        return RTSP_ERR;
+    }
 
-	if (user_name.length() != 0 && password.length() != 0) {
-		authenticator.setUsernameAndPassword(user_name.c_str(), password.c_str());
-	}
-	
-	rtsp->sendOptionsCommand(&MyRTSPClient::continueAfterOPTIONS, &authenticator);
-	Status = waitLive555Response(DEFAULT_WAIT_TIME);
-	if (Status != RTSP_OK){
+    if (user_name.length() != 0 && password.length() != 0) {
+        authenticator.setUsernameAndPassword(user_name.c_str(), password.c_str());
+    }
+    
+    rtsp->sendOptionsCommand(&MyRTSPClient::continueAfterOPTIONS, &authenticator);
+    Status = waitLive555Response(DEFAULT_WAIT_TIME);
+    if (Status != RTSP_OK){
         goto quit;
-	}
+    }
 
-	f_npt_start = 0;
+    f_npt_start = 0;
 
-	/* The PLAY */
-	rtsp->sendPlayCommand(*m_pMediaSession, MyRTSPClient::default_live555_callback, f_npt_start, -1, 1);
+    /* The PLAY */
+    rtsp->sendPlayCommand(*m_pMediaSession, MyRTSPClient::default_live555_callback, f_npt_start, -1, 1);
 
-	Status = waitLive555Response(DEFAULT_WAIT_TIME);
-	if (Status != RTSP_OK) {
-		goto quit;
-	}
+    Status = waitLive555Response(DEFAULT_WAIT_TIME);
+    if (Status != RTSP_OK) {
+        goto quit;
+    }
 
-	/* Retrieve the timeout value and set up a timeout prevention thread */
-	i_timeout = rtsp->sessionTimeoutParameter();
-	if (i_timeout <= 0)
-		i_timeout = 60; /* default value from RFC2326 */
-	i_pcr = 0;
+    /* Retrieve the timeout value and set up a timeout prevention thread */
+    i_timeout = rtsp->sessionTimeoutParameter();
+    if (i_timeout <= 0)
+        i_timeout = 60; /* default value from RFC2326 */
+    i_pcr = 0;
 
-	/* Retrieve the starttime if possible */
-	f_npt_start = m_pMediaSession->playStartTime();
-	if (m_pMediaSession->playEndTime() > 0)
-		f_npt_length = m_pMediaSession->playEndTime();
+    /* Retrieve the starttime if possible */
+    f_npt_start = m_pMediaSession->playStartTime();
+    if (m_pMediaSession->playEndTime() > 0)
+        f_npt_length = m_pMediaSession->playEndTime();
 
-	// now create thread for get data
-	b_is_paused = false;
-	b_do_control_pause_state = false;
+    // now create thread for get data
+    b_is_paused = false;
+    b_do_control_pause_state = false;
 
-	taskKeepAlive = sch->scheduleDelayedTask(3000000, (TaskFunc*)taskInterrupKeepAlive, this);
+    taskKeepAlive = sch->scheduleDelayedTask(3000000, (TaskFunc*)taskInterrupKeepAlive, this);
 
-	Status = demux_loop();
+    Status = demux_loop();
 
 quit:
-	if (taskKeepAlive) {
-		sch->unscheduleDelayedTask(taskKeepAlive);
-		taskKeepAlive = NULL;
-	}
+    if (taskKeepAlive) {
+        sch->unscheduleDelayedTask(taskKeepAlive);
+        taskKeepAlive = NULL;
+    }
 
-	if (rtsp && m_pMediaSession)
-		rtsp->sendTeardownCommand(*m_pMediaSession, NULL);
+    if (rtsp && m_pMediaSession)
+        rtsp->sendTeardownCommand(*m_pMediaSession, NULL);
 
-	if (m_pMediaSession) {
-		Medium::close(m_pMediaSession);
-		m_pMediaSession = NULL;
-	}
+    if (m_pMediaSession) {
+        Medium::close(m_pMediaSession);
+        m_pMediaSession = NULL;
+    }
 
-	if (rtsp) {
-		RTSPClient::close(rtsp);
-		rtsp = NULL;
-	}
+    if (rtsp) {
+        RTSPClient::close(rtsp);
+        rtsp = NULL;
+    }
 
-	for (size_t i = 0; i < listTracks.size(); i++) {
-		delete listTracks[i];
-	}
+    for (size_t i = 0; i < listTracks.size(); i++) {
+        delete listTracks[i];
+    }
 
-	listTracks.clear();
+    listTracks.clear();
 
-	u_port_begin = 0;
-	
-	return Status;
+    u_port_begin = 0;
+    
+    return Status;
 }
 
 void Live555Client::togglePause()
@@ -864,7 +864,7 @@ int Live555Client::seek(double f_time)
 
 void Live555Client::StopRtsp()
 {
-	demuxLoopFlag = false;
+    demuxLoopFlag = false;
 }
 
 void Live555Client::setUser(const char* user_name, const char* password)
@@ -875,21 +875,21 @@ void Live555Client::setUser(const char* user_name, const char* password)
 
 void Live555Client::setDestination(string Addr, int DstPort)
 {
-	MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
-	client->setDestination(Addr, DstPort);
+    MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
+    client->setDestination(Addr, DstPort);
 }
 
 void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
 {
-	live555ResultCode = result_code;
+    live555ResultCode = result_code;
     if ( result_code != 0 ){
         return;
     }
 
-	if ((sdp == nullptr) || strlen(sdp) < 5) {
-		live555ResultCode = HTTP_STREAM_NOT_FOUND;
-		return;
-	}
+    if ((sdp == nullptr) || strlen(sdp) < 5) {
+        live555ResultCode = HTTP_STREAM_NOT_FOUND;
+        return;
+    }
     MediaSubsessionIterator *iter = NULL;
     MediaSubsession         *sub = NULL;
     MyRTSPClient* client = static_cast<MyRTSPClient*>(rtsp);
@@ -970,8 +970,8 @@ void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
                     client->sendSetupCommand(*sub, MyRTSPClient::default_live555_callback, False,
                         !toBool(b_rtsp_tcp), False);
 
-					if (waitLive555Response(DEFAULT_WAIT_TIME) != RTSP_OK){
-						onDebug("SETUP failed!");
+                    if (waitLive555Response(DEFAULT_WAIT_TIME) != RTSP_OK){
+                        onDebug("SETUP failed!");
                         break;
                     }
                     else{
@@ -1019,7 +1019,7 @@ void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
 
     u_port_begin = i_client_port;
 
-	event_rtsp = 1;
+    event_rtsp = 1;
 
 }
 
@@ -1039,7 +1039,7 @@ void Live555Client::continueAfterOPTIONS( int result_code, char* result_string )
 
 void Live555Client::live555Callback( int result_code )
 {
-	live555ResultCode = result_code;
+    live555ResultCode = result_code;
     event_rtsp = 1;
 }
 
@@ -1093,14 +1093,14 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
                         atomLength > 8 &&
                         atomLength <= INT_MAX )
                     {
-						track->getFormat().extra = string((char*)pos + 8, atomLength - 8);
+                        track->getFormat().extra = string((char*)pos + 8, atomLength - 8);
                         break;
                     }
                     pos += atomLength;
                 }
             }
             else{
-				track->getFormat().extra.erase(track->getFormat().extra.size()-16, 16);
+                track->getFormat().extra.erase(track->getFormat().extra.size()-16, 16);
             }
         }
         else {
@@ -1111,8 +1111,8 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
                 track->doWaiting(0);
                 return;
             }
-			track->getFormat().codec = string((char*)sdAtom, 4);;
-			track->getFormat().audio.i_bitspersample = (sdAtom[22] << 8) | sdAtom[23];
+            track->getFormat().codec = string((char*)sdAtom, 4);;
+            track->getFormat().audio.i_bitspersample = (sdAtom[22] << 8) | sdAtom[23];
         }
         //tk->p_es = es_out_Add( p_demux->out, &tk->fmt );
     }
@@ -1127,8 +1127,8 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
             //msg_Dbg( p_demux, "lost %d bytes", i_truncated_bytes );
             //msg_Dbg( p_demux, "increasing buffer size to %d", tk->i_buffer * 2 );
             p_tmp = realloc(track->p_buffer, track->i_buffer * 2 );
-			track->p_buffer = (uint8_t*)p_tmp;
-			track->i_buffer *= 2;
+            track->p_buffer = (uint8_t*)p_tmp;
+            track->i_buffer *= 2;
         }
     }
 
@@ -1183,29 +1183,29 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
     /* we have read data */
     track->doWaiting(0);
 
-	i_no_data_ti = 0;
+    i_no_data_ti = 0;
 
     if( i_pts > 0 && !track->b_muxed ){
-		track->i_pts = i_pts;
+        track->i_pts = i_pts;
     }
 
-	uint8_t* p_buffer = track->buffer();
+    uint8_t* p_buffer = track->buffer();
 
-	if (track->getFormat().codec == "AMR" ||
-		track->getFormat().codec == "AMR-WB")
-	{
-		p_buffer++;
-	}
-	else if (track->getFormat().codec == "H261" ||
-		track->getFormat().codec == "H264" ||
-		track->getFormat().codec == "H265")
-	{
-		p_buffer += 4;
-	}
+    if (track->getFormat().codec == "AMR" ||
+        track->getFormat().codec == "AMR-WB")
+    {
+        p_buffer++;
+    }
+    else if (track->getFormat().codec == "H261" ||
+        track->getFormat().codec == "H264" ||
+        track->getFormat().codec == "H265")
+    {
+        p_buffer += 4;
+    }
 
-	track->doWaiting(1);
-	sub->readSource()->getNextFrame(p_buffer, track->buffer_size(),
-		Live555Client::LiveTrack::streamRead, track, Live555Client::LiveTrack::streamClose, track);
+    track->doWaiting(1);
+    sub->readSource()->getNextFrame(p_buffer, track->buffer_size(),
+        Live555Client::LiveTrack::streamRead, track, Live555Client::LiveTrack::streamClose, track);
 }
 
 void Live555Client::onStreamClose(LiveTrack* track)
@@ -1213,76 +1213,76 @@ void Live555Client::onStreamClose(LiveTrack* track)
     event_rtsp = (char)0xff;
     event_data = (char)0xff;
 
-	live555ResultCode = HTTP_ERR_EOF;
+    live555ResultCode = HTTP_ERR_EOF;
 }
 
 
 unsigned char* parseH264ConfigStr(char const* configStr,
-	unsigned int& configSize)
+    unsigned int& configSize)
 {
-	char *dup, *psz;
-	size_t i_records = 1;
+    char *dup, *psz;
+    size_t i_records = 1;
 
-	configSize = 0;
+    configSize = 0;
 
-	if (configStr == NULL || *configStr == '\0')
-		return NULL;
+    if (configStr == NULL || *configStr == '\0')
+        return NULL;
 
-	psz = dup = strdup(configStr);
+    psz = dup = strdup(configStr);
 
-	/* Count the number of commas */
-	for (psz = dup; *psz != '\0'; ++psz)
-	{
-		if (*psz == ',')
-		{
-			++i_records;
-			*psz = '\0';
-		}
-	}
+    /* Count the number of commas */
+    for (psz = dup; *psz != '\0'; ++psz)
+    {
+        if (*psz == ',')
+        {
+            ++i_records;
+            *psz = '\0';
+        }
+    }
 
-	size_t configMax = 5 * strlen(dup);
-	unsigned char *cfg = new unsigned char[configMax];
-	psz = dup;
-	for (size_t i = 0; i < i_records; ++i)
-	{
-		cfg[configSize++] = 0x00;
-		cfg[configSize++] = 0x00;
-		cfg[configSize++] = 0x00;
-		cfg[configSize++] = 0x01;
+    size_t configMax = 5 * strlen(dup);
+    unsigned char *cfg = new unsigned char[configMax];
+    psz = dup;
+    for (size_t i = 0; i < i_records; ++i)
+    {
+        cfg[configSize++] = 0x00;
+        cfg[configSize++] = 0x00;
+        cfg[configSize++] = 0x00;
+        cfg[configSize++] = 0x01;
 
-		configSize += vlc_b64_decode_binary_to_buffer(cfg + configSize,
-			configMax - configSize, psz);
-		psz += strlen(psz) + 1;
-	}
+        configSize += vlc_b64_decode_binary_to_buffer(cfg + configSize,
+            configMax - configSize, psz);
+        psz += strlen(psz) + 1;
+    }
 
-	free(dup);
-	return cfg;
+    free(dup);
+    return cfg;
 }
 
 uint8_t * parseVorbisConfigStr(char const* configStr,
-	unsigned int& configSize)
+    unsigned int& configSize)
 {
-	configSize = 0;
-	if (configStr == NULL || *configStr == '\0')
-		return NULL;
+    configSize = 0;
+    if (configStr == NULL || *configStr == '\0')
+        return NULL;
 #if LIVEMEDIA_LIBRARY_VERSION_INT >= 1332115200 // 2012.03.20
-	unsigned char *p_cfg = base64Decode(configStr, configSize);
+    unsigned char *p_cfg = base64Decode(configStr, configSize);
 #else
-	char* configStr_dup = strdup(configStr);
-	unsigned char *p_cfg = base64Decode(configStr_dup, configSize);
-	free(configStr_dup);
+    char* configStr_dup = strdup(configStr);
+    unsigned char *p_cfg = base64Decode(configStr_dup, configSize);
+    free(configStr_dup);
 #endif
-	uint8_t *p_extra = NULL;
-	/* skip header count, ident number and length (cf. RFC 5215) */
-	const unsigned int headerSkip = 9;
-	if (configSize > headerSkip && ((uint8_t*)p_cfg)[3] == 1)
-	{
-		configSize -= headerSkip;
-		p_extra = new uint8_t[configSize];
-		memcpy(p_extra, p_cfg + headerSkip, configSize);
-	}
-	delete[] p_cfg;
-	return p_extra;
+    uint8_t *p_extra = NULL;
+    /* skip header count, ident number and length (cf. RFC 5215) */
+    const unsigned int headerSkip = 9;
+    if (configSize > headerSkip && ((uint8_t*)p_cfg)[3] == 1)
+    {
+        configSize -= headerSkip;
+        p_extra = new uint8_t[configSize];
+        memcpy(p_extra, p_cfg + headerSkip, configSize);
+    }
+    delete[] p_cfg;
+    return p_extra;
 }
 
 int HttpErrToRtspErr(int http)
