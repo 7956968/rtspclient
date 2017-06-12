@@ -176,19 +176,18 @@ public:
     void setRTPPortBegin(unsigned short port_begin) { u_port_begin = port_begin; }
     unsigned short getRTPPortNoUse() { return u_port_begin; }
 
-    //流信息
-    virtual void onInitializedTrack(LiveTrack* track) {}
-
-    //一帧数据
-    virtual void onData(LiveTrack* track, uint8_t* p_buffer, int i_size, int i_truncated_bytes, int64_t pts, int64_t dts) {}
-    virtual void onResetPcr(){}
-
-    virtual void onDebug(const char* msg){}
-
 protected:
 	//开始播放,阻塞操作
 	int PlayRtsp(std::string Uri);
 	virtual int StopRtsp();
+	//流信息
+	virtual void onInitializedTrack(LiveTrack* track) {}
+
+	//一帧数据
+	virtual void onData(LiveTrack* track, uint8_t* p_buffer, int i_size, int i_truncated_bytes, int64_t pts, int64_t dts) {}
+	virtual void onResetPcr() {}
+
+	virtual void onDebug(const char* msg) {}
 };
 
 #endif//LIVE555_CLIENT_H__

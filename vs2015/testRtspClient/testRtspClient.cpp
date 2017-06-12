@@ -222,7 +222,7 @@ int main()
 			demux0.Stop();
 		} },
 
-		{0,"测试一个不存在的地址并尝试不断连接10秒后关闭",[&] {
+		{1,"测试一个不存在的地址并尝试不断连接10秒后关闭",[&] {
 			DemuxLive555 demux0;
 
 			demux0.Play(NoExistRtspAddr);
@@ -258,7 +258,7 @@ int main()
 			demux0.Stop();
 		}},
 
-		{0,"单路疯狂的播放停止",[&] {
+		{1,"单路疯狂的播放停止",[&] {
 			int testTime = 5;
 			while (testTime-- > 0)
 			{
@@ -328,12 +328,8 @@ int main()
 			demux0.PrintTs = false;
 			demux0.Play(RtspAddrWileEof);
 
-			while(1)
 			{
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-				if (demux0.GetStatus() != RTSP_OK) {
-					break;
-				}
+				std::this_thread::sleep_for(std::chrono::seconds(120));
 			}
 
 			demux0.Stop();
@@ -348,18 +344,6 @@ int main()
 		}
 	}
 
-
-	{
-		DemuxLive555 demux0;
-		demux0.PrintTs = false;
-		demux0.Play(normalRtspAddr);
-
-		{
-			std::this_thread::sleep_for(std::chrono::minutes(666));
-		}
-
-		demux0.Stop();
-	}
 	printf(" 测试完成\n");
 
 	cin.get();
