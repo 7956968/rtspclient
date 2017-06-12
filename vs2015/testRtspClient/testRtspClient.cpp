@@ -88,8 +88,13 @@ public:
 			}
 			else if(Status == RTSP_EOF) {
 				std::cout << "rtsp eof" << std::endl;
-				break;
-				//do what you want
+				if (m_ReconnectOnEof) {
+					std::cout << "reconnect" << std::endl;
+				}
+				else {
+					std::cout << "quit" << std::endl;
+					break;
+				}
 			}
 			else if (Status == RTSP_ERR) {
 				std::cout << "rtsp err" << std::endl;
@@ -171,6 +176,8 @@ public:
 	string DstFile;
 
 	bool PrintTs = true;
+	int m_ReconnectOnTimeOut = true;
+	int m_ReconnectOnEof = false;
 
 	int GetStatus() { return m_RtspStatus; }
 private:
@@ -181,7 +188,7 @@ private:
 	std::string m_Password;
 	std::string m_Uri;
 	std::thread m_demuxLoop;
-	int m_ReconnectOnTimeOut = true;
+
 	int m_ReconnectGap = 3;				//重连间隔,秒
 	volatile bool m_MyLoop = false;
 };
@@ -246,7 +253,7 @@ int main()
 			demux0.Stop();
 		}},
 
-		{1,"测试一个存在的地址并连接10秒后关闭",[&] {
+		{0,"测试一个存在的地址并连接10秒后关闭",[&] {
 			DemuxLive555 demux0;
 
 			demux0.Play(normalRtspAddr);
@@ -330,6 +337,19 @@ int main()
 
 			{
 				std::this_thread::sleep_for(std::chrono::seconds(120));
+			}
+
+			demux0.Stop();
+		} },
+
+		{ 1,"测试一个存在的地址并长时间播放",[&] {
+			DemuxLive555 demux0;
+
+			demux0.Play(normalRtspAddr);
+			demux0.PrintTs = false;
+			demux0.m_ReconnectOnEof = true;
+			{
+				std::this_thread::sleep_for(std::chrono::hours(5));
 			}
 
 			demux0.Stop();

@@ -683,6 +683,7 @@ int Live555Client::demux(void)
 int Live555Client::demux_loop()
 {
     std::chrono::high_resolution_clock::time_point last_call_timeout= std::chrono::high_resolution_clock::now();
+	demuxLoopFlag = true;
 
     while (demuxLoopFlag)
     {
@@ -806,7 +807,6 @@ int Live555Client::PlayRtsp(string Uri)
 	b_is_paused = false;
 	b_do_control_pause_state = false;
 	b_timeout_call = true;
-	demuxLoopFlag = true;
 
 	Status = demux_loop();
 
