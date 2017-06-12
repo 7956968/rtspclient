@@ -98,8 +98,9 @@ public:
 private:
     void* env;
     void* scheduler;
-	RTSPClient* rtsp;
+	MyRTSPClient* rtsp;
 	MediaSession* m_pMediaSession;
+	void* taskKeepAlive;
 
     char  event_rtsp;
     char  event_data;
@@ -108,7 +109,6 @@ private:
 
 	int				 live555ResultCode;/* live555·µ»ØµÄhttp×´Ì¬Öµ */
     unsigned int     i_timeout;     /* session timeout value in seconds */
-    bool             b_timeout_call;/* mark to send an RTSP call to prevent server timeout */
 
     int64_t          i_pcr; /* The clock */
     double           f_seekTime;
@@ -118,7 +118,6 @@ private:
 
     bool             b_paused;
     bool             b_multicast;
-    bool             b_no_data;     /* if we never received any data */
     int              i_no_data_ti;  /* consecutive number of TaskInterrupt */
 
     bool             b_rtsp_tcp;
@@ -136,6 +135,7 @@ private:
 
     static void taskInterruptData( void *opaque );
     static void taskInterruptRTSP( void *opaque );
+	static void taskInterrupKeepAlive(void *opaque);
 
     int waitLive555Response( int i_timeout = 0 /* ms */ );
 

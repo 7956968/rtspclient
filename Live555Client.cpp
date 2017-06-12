@@ -6,13 +6,7 @@
 #include <liveMedia_version.hh>
 #include <Base64.hh>
 #include <RTSPCommon.hh>
-#include <chrono>
-#include <string.h>
 #include <assert.h>
-#include <limits.h>
-#include <stdio.h>
-#include <sstream>
-#include <iostream>
 
 #if defined(_WIN32) || defined(WIN32)
 #pragma warning(disable:4996)
@@ -20,7 +14,7 @@
 
 using namespace std;
 
-#define DEFAULT_WAIT_TIME         (800)         //默认超时时间,200毫秒
+#define DEFAULT_WAIT_TIME         (800)         //默认超时时间,毫秒
 
 #define HTTP_OK	                  (0)
 //这个错误号表明虽然live555没返回http错误。但我们处理RTSP过程中碰到了错误
@@ -39,7 +33,6 @@ using namespace std;
 #define CLOCK_FREQ INT64_C(1000000)
 
 int HttpErrToRtspErr(int http);
-
 unsigned char* parseH264ConfigStr(char const* configStr,
 	unsigned int& configSize);
 uint8_t * parseVorbisConfigStr(char const* configStr,
@@ -513,6 +506,37 @@ void Live555Client::taskInterruptRTSP( void *opaque )
     pThis->event_rtsp = (char)0xff;
 }
 
+void Live555Client::taskInterrupKeepAlive(void *opaque)
+{
+	Live555Client *pThis = static_cast<Live555Client*>(opaque);
+	if (pThis) return;
+
+	MyRTSPClient  *pRtsp = pThis->rtsp;
+	if (pRtsp) return;
+
+	MediaSession  *pMedia = pThis->m_pMediaSession;
+	if (pMedia) return;
+
+	TaskScheduler *sch = static_cast<TaskScheduler*>(pThis->scheduler);
+	if (sch) return;
+
+	char *psz_bye = NULL;
+	if (pRtsp->isSupportsGetParameter())
+		pRtsp->sendGetParameterCommand(*pMedia, NULL, psz_bye);
+	else {
+		if (pThis->user_name.length() > 0 && (pThis->password.length()) > 0) {
+			Authenticator authenticator;
+			authenticator.setUsernameAndPassword(pThis->user_name.c_str(), pThis->password.c_str());
+			pRtsp->sendOptionsCommand(NULL, &authenticator);
+		}
+		else {
+			pRtsp->sendOptionsCommand(NULL, NULL);
+		}
+	}
+
+	sch->rescheduleDelayedTask(pThis->taskKeepAlive, 3000000, (TaskFunc*)taskInterrupKeepAlive, opaque);
+}
+
 int Live555Client::waitLive555Response( int i_timeout /* ms */ )
 {
     TaskToken task = nullptr;
@@ -578,25 +602,10 @@ void Live555Client::controlSeek()
 int Live555Client::demux(void)
 {
     TaskToken      task;
-    MyRTSPClient*    client = static_cast<MyRTSPClient*>(rtsp);
+    MyRTSPClient*  client = static_cast<MyRTSPClient*>(rtsp);
     TaskScheduler* sch = static_cast<TaskScheduler*>(scheduler);
 
     bool    b_send_pcr = true;
-
-    /* Check if we need to send the server a Keep-A-Live signal */
-    if( b_timeout_call && client && m_pMediaSession)
-    {
-        char *psz_bye = NULL;
-        if (client->isSupportsGetParameter())
-            client->sendGetParameterCommand( *m_pMediaSession, NULL, psz_bye );
-        else {
-            Authenticator authenticator;
-            authenticator.setUsernameAndPassword( user_name.c_str(), password.c_str() );
-            client->sendOptionsCommand(NULL, &authenticator);
-        }
-
-        b_timeout_call = false;
-    }
 
     if (b_is_paused)
         return RTSP_OK;
@@ -660,14 +669,12 @@ int Live555Client::demux(void)
          }
      }
 
-    if( b_multicast && b_no_data &&
-     ( i_no_data_ti > 120 ) )
+    if( b_multicast && ( i_no_data_ti > 120 ) )
     {
      onDebug( "no multicast data received in 36s, aborting" );
      return RTSP_TIMEOUT;
     }
-    else if( !b_multicast && !b_paused &&
-           b_no_data && ( i_no_data_ti > 34 ) )
+    else if( !b_multicast && !b_paused && ( i_no_data_ti > 34 ) )
     {
      onDebug( "no data received in 10s, aborting" );
      return RTSP_TIMEOUT;
@@ -682,17 +689,10 @@ int Live555Client::demux(void)
 
 int Live555Client::demux_loop()
 {
-    std::chrono::high_resolution_clock::time_point last_call_timeout= std::chrono::high_resolution_clock::now();
 	demuxLoopFlag = true;
 
     while (demuxLoopFlag)
     {
-        std::chrono::seconds lasting = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - last_call_timeout);
-        if (lasting.count() >= (i_timeout - 2)) {
-            last_call_timeout= std::chrono::high_resolution_clock::now();
-            b_timeout_call = true;
-        }
-
         if (b_do_control_pause_state) {
             if (f_seekTime >= 0)
                 controlSeek();
@@ -726,13 +726,12 @@ Live555Client::Live555Client(void)
     , b_get_param(false)
     , live555ResultCode(0)
     , i_timeout(60)
-    , b_timeout_call(false)
+	, taskKeepAlive(NULL)
     , i_pcr(VLC_TS_0)
     , f_seekTime(-1.0)
     , f_npt(0)
     , f_npt_length(0)
     , f_npt_start(0)
-    , b_no_data(false)
     , i_no_data_ti(0)
     , b_is_paused(false)
     , b_do_control_pause_state(false)
@@ -806,11 +805,17 @@ int Live555Client::PlayRtsp(string Uri)
 	// now create thread for get data
 	b_is_paused = false;
 	b_do_control_pause_state = false;
-	b_timeout_call = true;
+
+	taskKeepAlive = sch->scheduleDelayedTask(3000000, (TaskFunc*)taskInterrupKeepAlive, this);
 
 	Status = demux_loop();
 
 quit:
+	if (taskKeepAlive) {
+		sch->unscheduleDelayedTask(taskKeepAlive);
+		taskKeepAlive = NULL;
+	}
+
 	if (rtsp && m_pMediaSession)
 		rtsp->sendTeardownCommand(*m_pMediaSession, NULL);
 
@@ -1012,7 +1017,6 @@ void Live555Client::continueAfterDESCRIBE( int result_code, char* sdp)
     //msg_Dbg( p_demux, "setup start: %f stop:%f", p_sys->f_npt_start, p_sys->f_npt_length );
 
     /* */
-    b_no_data = true;
     i_no_data_ti = 0;
 
     u_port_begin = i_client_port;
@@ -1180,8 +1184,8 @@ void Live555Client::onStreamRead(LiveTrack* track, unsigned int i_size,
 
     /* we have read data */
     track->doWaiting(0);
-    b_no_data = false;
-    i_no_data_ti = 0;
+
+	i_no_data_ti = 0;
 
     if( i_pts > 0 && !track->b_muxed ){
 		track->i_pts = i_pts;
