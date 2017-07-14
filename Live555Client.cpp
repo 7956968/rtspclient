@@ -21,6 +21,7 @@ using namespace std;
 #define HTTP_ERR_USR	          (99)
 #define HTTP_TIMEOUT        	  (180)
 #define HTTP_ERR_EOF	          (502)
+#define HTTP_AUTH_ERR       	  (401)
 #define HTTP_STREAM_NOT_FOUND	  (404)
 #define HTTP_SESSION_NOT_FOUND	  (454)
 #define HTTP_UNSUPPORTED_TRANSPOR (461)
@@ -1290,10 +1291,11 @@ int HttpErrToRtspErr(int http)
     if (http == HTTP_TIMEOUT)               return RTSP_TIMEOUT;
     if (http == HTTP_ERR_USR)               return RTSP_ERR;
     if (http == HTTP_ERR_EOF)               return RTSP_EOF;
-    if (http == HTTP_STREAM_NOT_FOUND)      return RTSP_ERR;
-    if (http == HTTP_SESSION_NOT_FOUND)     return RTSP_ERR;
+    if (http == HTTP_STREAM_NOT_FOUND)      return RTSP_NOT_FOUND;
+    if (http == HTTP_SESSION_NOT_FOUND)     return RTSP_NOT_FOUND;
     if (http == HTTP_UNSUPPORTED_TRANSPOR)  return RTSP_ERR;
     if (http == HTTP_OK)                    return RTSP_OK;
+    if (http == HTTP_AUTH_ERR)              return RTSP_AUTH_ERR;
 
     return RTSP_ERR;
 }

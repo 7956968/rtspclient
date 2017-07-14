@@ -12,15 +12,23 @@
 #define RTSP_EOF		(2)
 #define RTSP_ERR		(3)
 #define RTSP_USR_STOP	(4)
+#define RTSP_NOT_FOUND	(5)
+#define RTSP_AUTH_ERR	(6)
 
 class MediaSession;
 class MyRTSPClient;
 
-class Live555Client
+#ifdef LIBRTSP_EXPORTS
+#define DLL_API __declspec(dllexport)
+#else
+#define DLL_API __declspec(dllimport)
+#endif
+
+ class DLL_API Live555Client
 {
     friend class MyRTSPClient;
 public:
-    class LiveTrack {
+    class DLL_API LiveTrack {
     public:
         struct media_format {
 
