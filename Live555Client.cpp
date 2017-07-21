@@ -1300,6 +1300,8 @@ int HttpErrToRtspErr(int http)
     return RTSP_ERR;
 }
 
+#pragma comment(lib,"../../../ThirdParty/live.2017.01.26/live/Debug/live.2017.01.26.lib")
+
 /*
 listTracks select…æµÙ 
 */

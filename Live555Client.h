@@ -18,17 +18,11 @@
 class MediaSession;
 class MyRTSPClient;
 
-#ifdef LIBRTSP_EXPORTS
-#define DLL_API __declspec(dllexport)
-#else
-#define DLL_API __declspec(dllimport)
-#endif
-
- class DLL_API Live555Client
+ class Live555Client
 {
     friend class MyRTSPClient;
 public:
-    class DLL_API LiveTrack {
+    class LiveTrack {
     public:
         struct media_format {
 
@@ -73,7 +67,7 @@ public:
         int64_t         i_pts;
         double          f_npt;
 
-        media_format    fmt;
+        media_format fmt;
 
     public:
         LiveTrack(Live555Client* p_sys, void* sub, int buffer_size);
