@@ -453,7 +453,7 @@ int Live555Client::LiveTrack::init()
     return RTSP_OK;
 }
 
-string Live555Client::LiveTrack::getSessionId() const
+const char* Live555Client::LiveTrack::getSessionId() const
 {
     MediaSubsession* sub = static_cast<MediaSubsession*>(media_sub_session);
     if (!sub)
@@ -462,7 +462,7 @@ string Live555Client::LiveTrack::getSessionId() const
     return sub->sessionId();
 }
 
-string Live555Client::LiveTrack::getSessionName() const
+const char* Live555Client::LiveTrack::getSessionName() const
 {
     MediaSubsession* sub = static_cast<MediaSubsession*>(media_sub_session);
     if (!sub)
@@ -753,6 +753,7 @@ Live555Client::~Live555Client(void)
     TaskScheduler* sch = static_cast<TaskScheduler*>(scheduler);
     environment->reclaim();
     delete sch;
+    sch = NULL;
 }
 
 int Live555Client::PlayRtsp(string Uri)
@@ -1299,8 +1300,6 @@ int HttpErrToRtspErr(int http)
 
     return RTSP_ERR;
 }
-
-#pragma comment(lib,"../../../ThirdParty/live.2017.01.26/live/Debug/live.2017.01.26.lib")
 
 /*
 listTracks select…æµÙ 

@@ -10,7 +10,7 @@
 #include <thread>
 
 
-#include "../../Live555Client.h"
+#include "../LibRtsp/libRtspClient.h"
 
 using namespace std;
 
@@ -50,32 +50,46 @@ public:
 	}
 	int m_Step = 0;
 };
-class DemuxLive555 : public Live555Client
+
+void on_track(const struct librtsp_track_t * track_t, void *data);
+
+void on_data(librtsp_track_t* track,
+    uint8_t* p_buffer,
+    int i_size,
+    int i_truncated_bytes,
+    int64_t pts,
+    int64_t dts,
+    void *data);
+
+class DemuxLive555
 {
 public:
-	virtual void onInitializedTrack(LiveTrack* track)
+    DemuxLive555()
+    {
+        pRtsp = librtsp_new();
+        librtsp_track_set_callbacks(pRtsp, on_track, this);
+        librtsp_data_set_callbacks(pRtsp, on_data, this);
+    }
+
+    ~DemuxLive555()
+    {
+        librtsp_release(pRtsp);
+    }
+
+	virtual void onInitializedTrack(const struct librtsp_track_t* track)
 	{
-		LiveTrack::media_format& fmt = track->getFormat();
-		std::string SessionName = track->getSessionName();
-
-		if (fmt.type == "video") {
-			cout << "video:" << SessionName << endl;
-
-		}
-		if (fmt.type == "audio") {
-			cout << "aduio:" << SessionName << endl;
-		}
-	}
+        cout << "new track:"<< track->fmt.type << ","<< track->name << endl;
+    }
 
 	void Loop()
 	{
-		int Status = RTSP_OK;
+		int Status = LIBRTSP_OK;
 
 		while (m_MyLoop)
 		{
-			Status = PlayRtsp(m_Uri);
+			Status = librtsp_start(pRtsp, m_Uri.c_str());
 
-			if (Status == RTSP_TIMEOUT) {
+			if (Status == LIBRTSP_TIMEOUT) {
 				std::cout << "timeout" << std::endl;
 
 				if (m_ReconnectOnTimeOut) {
@@ -86,7 +100,7 @@ public:
 					break;
 				}
 			}
-			else if(Status == RTSP_EOF) {
+			else if(Status == LIBRTSP_EOF) {
 				std::cout << "rtsp eof" << std::endl;
 				if (m_ReconnectOnEof) {
 					std::cout << "reconnect" << std::endl;
@@ -96,15 +110,15 @@ public:
 					break;
 				}
 			}
-			else if (Status == RTSP_ERR) {
+			else if (Status == LIBRTSP_ERR) {
 				std::cout << "rtsp err" << std::endl;
 				break;
 			}
-			else if (Status == RTSP_USR_STOP) {
+			else if (Status == LIBRTSP_USR_STOP) {
 				std::cout << "usr stop" << std::endl;
 				break;
 			}
-			else if (Status == RTSP_OK) {
+			else if (Status == LIBRTSP_OK) {
 
 			}
 			else {
@@ -137,19 +151,19 @@ public:
 		//先设置自己的标志位
 		m_MyLoop = 0;
 		//停止主循环
-		StopRtsp();
+        librtsp_stop(pRtsp);
 		//等待线程结束
 		m_demuxLoop.join();
 	}
 
-	virtual void onData(LiveTrack* track,
+	virtual void onData(librtsp_track_t* track,
 		uint8_t* p_buffer,
 		int i_size,
 		int i_truncated_bytes,
 		int64_t pts, int64_t dts)
 	{
 		if (PrintTs) {
-			std::string SessionName = track->getSessionName();
+			std::string SessionName = track->name;
 			int64_t deltaPts = pts - lastPts;
 			int64_t deltaDts = dts - lastDts;
 			cout << SessionName << "," << i_size << ","
@@ -163,11 +177,9 @@ public:
 			m_Roll.Step();
 		}
 
-		LiveTrack::media_format& fmt = track->getFormat();
-
 		//如果是H264就保存
-		if ((DstFile.size() > 0) && (fmt.type == "video")
-			&& (fmt.codec == "H264")) {
+		if ((DstFile.size() > 0) && (track->fmt.type == "video")
+			&& (track->fmt.codec == "H264")) {
 			FILE* fp = fopen(DstFile.c_str(), "ab");
 			fwrite(p_buffer, i_size, 1, fp);
 			fclose(fp);
@@ -183,7 +195,7 @@ public:
 private:
 	int64_t lastPts = 0, lastDts = 0;
 	RollStepPrinter m_Roll;
-	int m_RtspStatus = RTSP_OK;
+	int m_RtspStatus = LIBRTSP_OK;
 	std::string m_UsrName;
 	std::string m_Password;
 	std::string m_Uri;
@@ -191,8 +203,28 @@ private:
 
 	int m_ReconnectGap = 3;				//重连间隔,秒
 	volatile bool m_MyLoop = false;
+
+    librtsp_t* pRtsp;
 };
 
+
+void on_track(const struct librtsp_track_t * track_t, void *data)
+{
+    DemuxLive555* pDemux = static_cast<DemuxLive555*>(data);
+    pDemux->onInitializedTrack(track_t);
+}
+
+void on_data(librtsp_track_t* track,
+    uint8_t* p_buffer,
+    int i_size,
+    int i_truncated_bytes,
+    int64_t pts,
+    int64_t dts,
+    void *data)
+{
+    DemuxLive555* pDemux = static_cast<DemuxLive555*>(data);
+    pDemux->onData(track, p_buffer, i_size, i_truncated_bytes, pts, dts);
+}
 
 using namespace std::chrono;
 using namespace std;
@@ -209,8 +241,8 @@ struct RtspTest
 
 int main()
 {
-	const char* normalRtspAddr  = "rtsp://192.168.103.45/ch0.liv";
-	const char* normalRtspAddr2 = "rtsp://192.168.103.46/ch0.liv";
+	const char* normalRtspAddr  = "rtsp://192.168.103.46/ch0.liv";
+	const char* normalRtspAddr2 = "rtsp://192.168.103.45/ch0.liv";
 	const char* NoExistRtspAddr = "rtsp://192.168.103.99/ch0.liv";
 	//1分钟以内的短文件用Live555做Server
 	const char* RtspAddrWileEof = "rtsp://127.0.0.1/h264RtspTestSave.264";

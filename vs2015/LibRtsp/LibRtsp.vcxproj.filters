@@ -21,9 +21,15 @@
     <ClCompile Include="..\..\Live555Client.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="libRtspClient.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Live555Client.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="libRtspClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
